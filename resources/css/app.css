@@ -1,0 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Days+One&family=Dela+Gothic+One&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    font-family: 'Manrope', sans-serif;
+    background-color: #EAEAEA; /* Светло-серый фон из твоего дизайна */
+}
