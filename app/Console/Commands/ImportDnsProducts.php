@@ -77,7 +77,7 @@ class ImportDnsProducts extends Command
                     $catData =['name' => 'Коврики для мыши', 'slug' => 'kovriki-dlia-mysi'];
                 } elseif (str_contains($searchString, 'материнская плата')) {
                     $catData =['name' => 'Материнские платы', 'slug' => 'materinskie-platy'];
-                } elseif (str_contains($searchString, 'кулер') || str_contains($searchString, 'система охлаждения')) {
+                } elseif ($this->matchesDnsCpuCoolerCategory($item, $nameLower, $typeLower)) {
                     $catData =['name' => 'Кулеры', 'slug' => 'kulery-dlia-processora'];
                 } elseif (str_contains($searchString, 'процессор')) {
                     $catData =['name' => 'Процессоры', 'slug' => 'processory'];
@@ -89,8 +89,16 @@ class ImportDnsProducts extends Command
                     $catData =['name' => 'Оперативная память', 'slug' => 'operativnaia-pamiat'];
                 } elseif (str_contains($searchString, 'm.2') || str_contains($searchString, 'm2')) {
                     $catData =['name' => 'M.2 SSD', 'slug' => 'm2-ssd-nakopiteli'];
-                } elseif (str_contains($searchString, 'ssd') || str_contains($searchString, 'msata') || str_contains($searchString, 'твердотельный')) {
-                    $catData =['name' => 'SATA SSD', 'slug' => 'sata-ssd-nakopiteli']; // Сюда же улетят и mSATA
+                } elseif (
+                    str_contains($searchString, 'ssd')
+                    || str_contains($searchString, 'msata')
+                    || str_contains($searchString, 'твердотельный')
+                    // DNS часто пишет «2.5" SATA накопитель» без слова SSD — иначе уходит в «Прочее» и не попадает в каталог SATA SSD.
+                    || str_contains($searchString, 'sata накопитель')
+                    || str_contains($searchString, 'sata-накопитель')
+                    || (str_contains($searchString, 'sata') && str_contains($searchString, 'накопитель'))
+                ) {
+                    $catData = ['name' => 'SATA SSD', 'slug' => 'sata-ssd-nakopiteli'];
                 } elseif (str_contains($searchString, 'жесткий диск') || str_contains($searchString, 'hdd')) {
                     $catData = ['name' => 'Жесткий диск', 'slug' => 'zestkii-disk'];
                 } elseif (str_contains($searchString, 'монитор')) {
@@ -153,5 +161,31 @@ class ImportDnsProducts extends Command
         }
 
         $this->info("Импорт ВСЕХ файлов успешно завершен! Твоя база EAV наполнена.");
+    }
+
+    /**
+     * Кулер для CPU: «кулер» как подстрока ловит «без кулера» у процессоров OEM — отдельная проверка.
+     */
+    private function matchesDnsCpuCoolerCategory(array $item, string $nameLower, string $typeLower): bool
+    {
+        if (preg_match('/^кулер\b/u', $nameLower)) {
+            return true;
+        }
+        if (preg_match('/\bкулер\s+(для\s+)?процессора\b/u', $nameLower)) {
+            return true;
+        }
+        if (preg_match('/^система\s+(жидкостного\s+)?охлаждения\b/u', $nameLower)) {
+            return true;
+        }
+        if (preg_match('/водян|жидкостн/u', $nameLower)) {
+            return true;
+        }
+        $tip = trim((string) ($item['specifications']['Тип'] ?? ''));
+        $tipLower = mb_strtolower($tip);
+        if ($tipLower !== '' && preg_match('/^(кулер|система охлаждения)\b/u', $tipLower)) {
+            return true;
+        }
+
+        return false;
     }
 }

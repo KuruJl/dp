@@ -7,9 +7,26 @@ import Modal from '@/Components/Modal';
 import ProductCard from '@/Components/ProductCard';
 import useDebounce from '@/hooks/useDebounce.js';
 
+/** Слоты конфигуратора: `/api/filters/{slug}` отдаёт характеристики в порядке приоритета */
+const CONFIGURATOR_CATEGORY_SLUGS = new Set([
+    'korpusa',
+    'materinskie-platy',
+    'kulery-dlia-processora',
+    'processory',
+    'operativnaia-pamiat',
+    'videokarty',
+    'm2-ssd-nakopiteli',
+    'sata-ssd-nakopiteli',
+    'zestkii-disk',
+    'bloki-pitaniia',
+]);
+
+const CONFIGURATOR_MODAL_SPEC_BLOCKS = 5;
+const DEFAULT_MODAL_SPEC_BLOCKS = 3;
+
 export default function ComponentSelectorModal({ isOpen, onClose, categoryInfo, onComponentSelect }) {
     const { auth } = usePage().props;
-    const isAdmin = auth.user && auth.user.is_admin;
+    const isAdmin = !!auth?.user?.is_admin;
 
     const [components, setComponents] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -153,9 +170,13 @@ export default function ComponentSelectorModal({ isOpen, onClose, categoryInfo, 
         });
     };
 
-    const importantSpecs = Object.entries(availableFilters.specs || {})
-        .sort((a, b) => (b[1]?.length || 0) - (a[1]?.length || 0))
-        .slice(0, 3);
+    const specEntries = Object.entries(availableFilters.specs || {});
+    const slug = categoryInfo?.categorySlug;
+    const importantSpecs = CONFIGURATOR_CATEGORY_SLUGS.has(slug)
+        ? specEntries.slice(0, CONFIGURATOR_MODAL_SPEC_BLOCKS)
+        : specEntries
+              .sort((a, b) => (b[1]?.length || 0) - (a[1]?.length || 0))
+              .slice(0, DEFAULT_MODAL_SPEC_BLOCKS);
 
     return (
         <Modal
@@ -243,7 +264,7 @@ export default function ComponentSelectorModal({ isOpen, onClose, categoryInfo, 
                                 ? `Показано ${paginationMeta.from}-${paginationMeta.to} из ${paginationMeta.total}`
                                 : 'Ничего не найдено'}
                         </p>
-                        {isAdmin && (
+                        {isAdmin ? (
                             <a 
                                 href={generateExportUrl()}
                                 target="_blank"
@@ -251,7 +272,7 @@ export default function ComponentSelectorModal({ isOpen, onClose, categoryInfo, 
                             >
                                 Экспорт в PDF
                             </a>
-                        )}
+                        ) : null}
                     </div>
                     
                     <div className="flex-grow overflow-y-auto">

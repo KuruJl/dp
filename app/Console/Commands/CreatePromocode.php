@@ -54,6 +54,7 @@ class CreatePromocode extends Command
                 'min_order_amount' => max(0, $min),
                 'usage_limit' => $limit,
                 'valid_until' => $until,
+                'is_active' => true,
             ]
         );
 

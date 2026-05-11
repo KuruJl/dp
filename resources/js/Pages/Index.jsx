@@ -298,10 +298,8 @@ export default function Index({ editingAssemblyId = null, loadAssemblyId = null 
             <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
                 <h1 className="text-3xl md:text-4xl font-extrabold text-black text-center mb-10">Конфигуратор</h1>
 
-                {/* === ГЛАВНАЯ ОБЕРТКА С СЕРОЙ РАМКОЙ === */}
                 <div className="border border-gray-400 rounded-xl p-6 md:p-10 flex flex-col lg:flex-row items-start gap-10 bg-transparent relative">
                     
-                    {/* === ЛЕВАЯ КОЛОНКА (Слоты) === */}
                     <div className="flex-1 w-full min-w-0">
                         <div className="mb-6">
                             <h2 className="text-2xl font-bold text-black">Системный блок</h2>
@@ -321,12 +319,10 @@ export default function Index({ editingAssemblyId = null, loadAssemblyId = null 
                                         </div>
                                         <div className="flex-1 flex flex-col justify-center min-w-0 py-2 pr-4">
                                             
-                                            {/* Название: убрали truncate, добавили красивый перенос строк */}
                                             <p className="text-sm font-bold text-black leading-snug mb-1">
                                                 {getCleanName(selectedItem.name)}
                                             </p>
                                             
-                                            {/* Характеристики: выводим значения через запятую (максимум 2 строки) */}
                                             <p className="text-[11px] text-gray-500 leading-relaxed line-clamp-2">
                                                 {selectedItem.attributes && selectedItem.attributes.length > 0 
                                                     ? selectedItem.attributes.map(attr => attr.pivot.value).join(', ')

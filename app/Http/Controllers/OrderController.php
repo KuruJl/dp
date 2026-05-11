@@ -6,11 +6,13 @@ use App\Models\Order;
 use App\Models\Cart;
 use App\Models\Product;
 use App\Models\Promocode;
+use App\Services\PromocodeApplicator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class OrderController extends Controller
 {
@@ -33,6 +35,8 @@ class OrderController extends Controller
             'promo_code' => ['nullable', 'string', 'max:100'],
             'comment' => ['nullable', 'string', 'max:1000'],
             'delivery_address' => ['nullable', 'string', 'max:500'],
+            'delivery_time' => ['nullable', 'string', 'max:64'],
+            'customer_comment' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $user = Auth::user();
@@ -69,12 +73,25 @@ class OrderController extends Controller
                 $status = ($validated['payment_method'] ?? '') === 'Онлайн' ? 'ожидает оплаты' : 'новый';
                 $orderNumber = 'ORD-' . now()->format('Ymd-His') . '-' . Str::upper(Str::random(4));
 
+                $deliveryAt = null;
+                $deliveryRaw = trim((string) ($validated['delivery_time'] ?? ''));
+                if ($deliveryRaw !== '') {
+                    try {
+                        $deliveryAt = Carbon::parse($deliveryRaw);
+                    } catch (\Throwable $e) {
+                        throw new \Exception('Укажите корректные дату и время доставки.');
+                    }
+                }
+
+                $customerComment = trim((string) ($validated['customer_comment'] ?? ''));
+
                 $orderCommentParts = array_filter([
                     "Получатель: {$validated['name']}",
                     "Телефон: {$validated['phone']}",
                     "Email: {$validated['email']}",
                     !empty($validated['promo_code']) ? "Промокод: {$validated['promo_code']}" : null,
                     !empty($validated['comment']) ? "Комментарий: {$validated['comment']}" : null,
+                    $customerComment !== '' ? "Комментарий покупателя:\n{$customerComment}" : null,
                 ]);
 
                 $createdOrder = Order::create([
@@ -85,6 +102,7 @@ class OrderController extends Controller
                     'payment_method' => $validated['payment_method'],
                     'delivery_method' => $validated['delivery_method'],
                     'delivery_address' => $deliveryAddress ?: null,
+                    'delivery_time' => $deliveryAt,
                     'comment' => implode("\n", $orderCommentParts),
                 ]);
 
@@ -113,14 +131,20 @@ class OrderController extends Controller
                     if (!$promocode) {
                         throw new \Exception('Указанный промокод не существует.');
                     }
-                    if (!$promocode->isValid()) {
-                        throw new \Exception('Промокод недействителен или срок его действия истек.');
-                    }
-                    if ($subtotalAmount < (float) $promocode->min_order_amount) {
-                        throw new \Exception("Минимальная сумма заказа для промокода: {$promocode->min_order_amount} ₽.");
+
+                    $orderLines = $cart->items->map(function ($cartItem) use ($products) {
+                        return (object) [
+                            'quantity' => $cartItem->quantity,
+                            'product' => $products->get($cartItem->product_id),
+                        ];
+                    });
+
+                    $evaluation = PromocodeApplicator::evaluate($promocode, $orderLines, $user);
+                    if (!$evaluation['valid']) {
+                        throw new \Exception($evaluation['message']);
                     }
 
-                    $discountAmount = $this->calculateDiscount($promocode, $subtotalAmount);
+                    $discountAmount = $evaluation['discount_amount'];
                     $promocodeId = $promocode->id;
                     $promocode->increment('used_count');
                 }
@@ -136,6 +160,14 @@ class OrderController extends Controller
             // Очищаем корзину (удаляем все items)
             $cart->items()->delete();
 
+            if (($order->payment_method ?? '') === 'Онлайн') {
+                $order->update([
+                    'status' => 'оплачен',
+                ]);
+
+                return redirect()->to('/profile/orders')->with('success', 'Заказ №' . $order->order_number . ' оплачен.');
+            }
+
             return redirect()->route('cart.index')->with('success', 'Заказ №' . $order->order_number . ' успешно оформлен!');
 
         } catch (\Exception $e) {
@@ -149,14 +181,4 @@ class OrderController extends Controller
         // ... Оставил для совместимости, но логика вывода заказов у нас теперь в ProfileController
     }
 
-    private function calculateDiscount(Promocode $promocode, float $subtotal): float
-    {
-        if ($subtotal <= 0) return 0;
-
-        $discount = $promocode->type === 'percent'
-            ? ($subtotal * ((float) $promocode->value / 100))
-            : (float) $promocode->value;
-
-        return min($subtotal, round($discount, 2));
-    }
 }

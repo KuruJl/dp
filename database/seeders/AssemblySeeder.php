@@ -16,7 +16,6 @@ class AssemblySeeder extends Seeder
     {
         $faker = Faker::create('ru_RU');
 
-        // Создадим одного пользователя для тестов, если таблица пустая
         if (User::count() === 0) {
             User::factory()->create([
                 'name' => 'Тестовый Пользователь',
@@ -64,7 +63,6 @@ class AssemblySeeder extends Seeder
             }
 
             if (!empty($componentIds)) {
-                // Связываем товары со сборкой
                 $assembly->products()->attach($componentIds);
             }
         }

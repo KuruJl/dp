@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Promocode;
+use App\Services\PromocodeApplicator;
 use Inertia\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
@@ -16,6 +17,58 @@ use Illuminate\Http\JsonResponse;
 
 class CartController extends Controller
 {
+    /** Короткий список характеристик для карточки в корзине (без «технического шума»). */
+    private function specPreviewForProduct(Product $product, int $limit = 6): array
+    {
+        $blacklistContains = [
+            'гаранти',
+            'стран',
+            'код производит',
+            'комплектац',
+            'срок эксплуатац',
+            'описан',
+            'ширин',
+            'высот',
+            'глубин',
+            'длина',
+            'толщин',
+            'вес',
+            'штатная частота',
+            'турбочастот',
+            'эффективная частота',
+            'количество универсальных',
+            'количество линий',
+            'особенност',
+            'дополнительн',
+        ];
+
+        $out = [];
+        foreach ($product->attributes as $attribute) {
+            $attrName = trim((string) $attribute->name);
+            $attrValue = trim((string) ($attribute->pivot->value ?? ''));
+            if ($attrName === '' || $attrValue === '') {
+                continue;
+            }
+            $lower = mb_strtolower($attrName);
+            $skip = false;
+            foreach ($blacklistContains as $needle) {
+                if (mb_stripos($lower, $needle) !== false) {
+                    $skip = true;
+                    break;
+                }
+            }
+            if ($skip) {
+                continue;
+            }
+            $out[] = ['name' => $attrName, 'value' => $attrValue];
+            if (count($out) >= $limit) {
+                break;
+            }
+        }
+
+        return $out;
+    }
+
     private function getCart()
     {
         if (Auth::check()) {
@@ -23,20 +76,21 @@ class CartController extends Controller
         }
         $guestToken = Cookie::get('guest_cart_token') ?? Str::uuid()->toString();
         Cookie::queue('guest_cart_token', $guestToken, 60 * 24 * 30);
+
         return Cart::firstOrCreate(['guest_token' => $guestToken]);
     }
 
     public function index(): Response
     {
         $cart = $this->getCart();
-        $detailedCartItems =[];
+        $detailedCartItems = [];
         $total = 0;
 
-        foreach ($cart->items()->with('product.images')->get() as $cartItem) {
+        foreach ($cart->items()->with(['product.images', 'product.attributes'])->get() as $cartItem) {
             $product = $cartItem->product;
             if ($product) {
-                $detailedCartItems[] =[
-                    'id' => $cartItem->id, // ID самой записи в корзине (для удаления)
+                $detailedCartItems[] = [
+                    'id' => $cartItem->id,
                     'product_id' => $product->id,
                     'name' => $product->name,
                     'image' => $product->images->first()?->path,
@@ -44,14 +98,15 @@ class CartController extends Controller
                     'quantity' => $cartItem->quantity,
                     'slug' => $product->slug,
                     'max_available' => $product->quantity,
+                    'spec_preview' => $this->specPreviewForProduct($product),
                 ];
                 $total += $product->price * $cartItem->quantity;
             } else {
                 $cartItem->delete();
             }
         }
-        
-        return Inertia::render('Cart',[
+
+        return Inertia::render('Cart', [
             'cart' => $detailedCartItems,
             'total' => $total,
         ]);
@@ -64,12 +119,8 @@ class CartController extends Controller
         ]);
 
         $cart = $this->getCart();
-        $subtotal = 0;
-        foreach ($cart->items()->with('product')->get() as $cartItem) {
-            if ($cartItem->product) {
-                $subtotal += $cartItem->product->price * $cartItem->quantity;
-            }
-        }
+        $lines = $cart->items()->with('product')->get();
+        $subtotal = PromocodeApplicator::cartSubtotal($lines);
 
         $rawCode = trim((string) ($validated['promo_code'] ?? ''));
         if ($rawCode === '') {
@@ -78,6 +129,7 @@ class CartController extends Controller
                 'message' => 'Введите промокод.',
                 'discount_amount' => 0,
                 'subtotal' => $subtotal,
+                'eligible_base' => 0,
                 'final_total' => $subtotal,
             ]);
         }
@@ -91,52 +143,16 @@ class CartController extends Controller
                 'message' => 'Промокод не существует.',
                 'discount_amount' => 0,
                 'subtotal' => $subtotal,
+                'eligible_base' => 0,
                 'final_total' => $subtotal,
             ]);
         }
 
-        if (!$promocode->isValid()) {
-            return response()->json([
-                'valid' => false,
-                'message' => 'Промокод недействителен или срок действия истек.',
-                'discount_amount' => 0,
-                'subtotal' => $subtotal,
-                'final_total' => $subtotal,
-            ]);
-        }
+        $result = PromocodeApplicator::evaluate($promocode, $lines, Auth::user());
 
-        if ($subtotal < (float) $promocode->min_order_amount) {
-            return response()->json([
-                'valid' => false,
-                'message' => "Минимальная сумма заказа для промокода: {$promocode->min_order_amount} ₽.",
-                'discount_amount' => 0,
-                'subtotal' => $subtotal,
-                'final_total' => $subtotal,
-            ]);
-        }
-
-        $discount = $this->calculateDiscount($promocode, $subtotal);
-        $finalTotal = max(0, $subtotal - $discount);
-
-        return response()->json([
-            'valid' => true,
-            'message' => 'Промокод применен.',
-            'discount_amount' => $discount,
-            'subtotal' => $subtotal,
-            'final_total' => $finalTotal,
-            'code' => $promocode->code,
-        ]);
-    }
-
-    private function calculateDiscount(Promocode $promocode, float $subtotal): float
-    {
-        if ($subtotal <= 0) return 0;
-
-        $discount = $promocode->type === 'percent'
-            ? ($subtotal * ((float) $promocode->value / 100))
-            : (float) $promocode->value;
-
-        return min($subtotal, round($discount, 2));
+        return response()->json(array_merge($result, [
+            'code' => $result['valid'] ? $promocode->code : null,
+        ]));
     }
 
     public function store(Request $request)
@@ -151,7 +167,7 @@ class CartController extends Controller
 
         $cartItem = $cart->items()->where('product_id', $product->id)->first();
         $currentQuantity = $cartItem ? $cartItem->quantity : 0;
-        
+
         if ($product->quantity < ($currentQuantity + $validated['quantity'])) {
             return back()->withErrors(['message' => "Недостаточно товара. На складе: {$product->quantity}."]);
         }
@@ -175,12 +191,14 @@ class CartController extends Controller
         }
 
         $cartItem->update(['quantity' => $validated['quantity']]);
+
         return redirect()->back()->with('success', 'Количество обновлено.');
     }
 
     public function remove(CartItem $cartItem)
     {
         $cartItem->delete();
+
         return redirect()->back()->with('success', 'Товар удален из корзины!');
     }
 }

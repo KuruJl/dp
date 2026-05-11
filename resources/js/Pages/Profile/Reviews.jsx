@@ -1,13 +1,80 @@
-import React from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import React, { useState } from 'react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import Header from '@/Components/Header';
 import Footer from '@/Components/Footer';
 import ProfileSidebar from '@/Components/ProfileSidebar';
 
+function Star({ filled, onClick }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`p-0.5 rounded ${onClick ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+            aria-label={filled ? 'заполненная звезда' : 'пустая звезда'}
+        >
+            <svg
+                className={`w-6 h-6 ${filled ? 'text-yellow-400' : 'text-gray-300'}`}
+                fill="currentColor"
+                viewBox="0 0 20 20"
+            >
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
+        </button>
+    );
+}
+
 export default function Reviews({ reviews = [] }) {
-    const { auth } = usePage().props;
+    const { auth, flash } = usePage().props;
     const user = auth?.user;
     const stars = [1, 2, 3, 4, 5];
+
+    const [editingId, setEditingId] = useState(null);
+    const [editRating, setEditRating] = useState(5);
+    const [editBody, setEditBody] = useState('');
+    const [editErrors, setEditErrors] = useState({});
+    const [saving, setSaving] = useState(false);
+    const [deletingId, setDeletingId] = useState(null);
+
+    const startEdit = (review) => {
+        setEditingId(review.id);
+        setEditRating(review.rating);
+        setEditBody(review.body);
+        setEditErrors({});
+    };
+
+    const cancelEdit = () => {
+        setEditingId(null);
+        setEditErrors({});
+    };
+
+    const saveEdit = (e) => {
+        e.preventDefault();
+        setSaving(true);
+        setEditErrors({});
+        router.patch(
+            route('reviews.update', { review: editingId }),
+            { rating: editRating, body: editBody },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    cancelEdit();
+                },
+                onError: (errors) => setEditErrors(errors),
+                onFinish: () => setSaving(false),
+            }
+        );
+    };
+
+    const confirmDelete = (reviewId) => {
+        if (!window.confirm('Удалить этот отзыв? Это действие нельзя отменить.')) {
+            return;
+        }
+        setDeletingId(reviewId);
+        router.delete(route('reviews.destroy', { review: reviewId }), {
+            preserveScroll: true,
+            onFinish: () => setDeletingId(null),
+        });
+    };
 
     return (
         <div className="min-h-screen flex flex-col bg-[#DEDEDE] font-man">
@@ -24,6 +91,12 @@ export default function Reviews({ reviews = [] }) {
 
                     <section className="flex-1 w-full bg-white rounded-xl p-6 md:p-8 border border-gray-200 shadow-sm min-w-0">
                         <h2 className="text-2xl font-extrabold text-black mb-6">Мои отзывы</h2>
+
+                        {flash?.success && (
+                            <div className="mb-6 rounded-lg bg-green-50 border border-green-200 text-green-800 px-4 py-3 text-sm font-medium">
+                                {flash.success}
+                            </div>
+                        )}
 
                         {reviews.length === 0 ? (
                             <div className="text-center py-12 border border-dashed border-gray-300 rounded-lg bg-gray-50">
@@ -51,22 +124,81 @@ export default function Reviews({ reviews = [] }) {
                                                 {review.is_approved ? 'Опубликован' : 'На рассмотрении'}
                                             </span>
                                         </div>
-                                        <p className="text-sm text-gray-700 leading-relaxed mb-3">{review.body}</p>
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex">
-                                                {stars.map((star) => (
-                                                    <svg
-                                                        key={star}
-                                                        className={`w-4 h-4 ${star <= review.rating ? 'text-yellow-400' : 'text-gray-300'}`}
-                                                        fill="currentColor"
-                                                        viewBox="0 0 20 20"
+
+                                        {editingId === review.id ? (
+                                            <form onSubmit={saveEdit} className="space-y-4 mt-3">
+                                                <div>
+                                                    <label className="block text-sm font-bold text-gray-700 mb-2">Оценка</label>
+                                                    <div className="flex gap-1">
+                                                        {stars.map((star) => (
+                                                            <Star key={star} filled={star <= editRating} onClick={() => setEditRating(star)} />
+                                                        ))}
+                                                    </div>
+                                                    {editErrors.rating && <p className="text-red-500 text-xs mt-1">{editErrors.rating}</p>}
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-bold text-gray-700 mb-2">Текст</label>
+                                                    <textarea
+                                                        value={editBody}
+                                                        onChange={(e) => setEditBody(e.target.value)}
+                                                        rows={4}
+                                                        className="w-full bg-white border border-gray-300 rounded-md px-4 py-3 text-sm text-black focus:ring-[#08004E] focus:border-[#08004E]"
+                                                    />
+                                                    {editErrors.body && <p className="text-red-500 text-xs mt-1">{editErrors.body}</p>}
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    <button
+                                                        type="submit"
+                                                        disabled={saving}
+                                                        className="bg-[#08004E] text-white font-semibold py-2 px-5 rounded-lg hover:bg-opacity-90 disabled:opacity-50"
                                                     >
-                                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                                    </svg>
-                                                ))}
-                                            </div>
-                                            <p className="text-sm font-semibold text-black">{review.rating}/5</p>
-                                        </div>
+                                                        {saving ? 'Сохранение…' : 'Сохранить'}
+                                                    </button>
+                                                    <button type="button" onClick={cancelEdit} className="border border-gray-300 text-gray-800 font-semibold py-2 px-5 rounded-lg hover:bg-gray-50">
+                                                        Отмена
+                                                    </button>
+                                                </div>
+                                                <p className="text-xs text-gray-500">После сохранения отзыв снова отправится на модерацию.</p>
+                                            </form>
+                                        ) : (
+                                            <>
+                                                <p className="text-sm text-gray-700 leading-relaxed mb-3">{review.body}</p>
+                                                <div className="flex flex-wrap items-center gap-3 justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="flex">
+                                                            {stars.map((star) => (
+                                                                <svg
+                                                                    key={star}
+                                                                    className={`w-4 h-4 ${star <= review.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                                                                    fill="currentColor"
+                                                                    viewBox="0 0 20 20"
+                                                                >
+                                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                                </svg>
+                                                            ))}
+                                                        </div>
+                                                        <p className="text-sm font-semibold text-black">{review.rating}/5</p>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => startEdit(review)}
+                                                            className="text-sm font-semibold text-[#08004E] hover:underline"
+                                                        >
+                                                            Изменить
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => confirmDelete(review.id)}
+                                                            disabled={deletingId === review.id}
+                                                            className="text-sm font-semibold text-red-600 hover:underline disabled:opacity-50"
+                                                        >
+                                                            {deletingId === review.id ? 'Удаление…' : 'Удалить'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
                                     </article>
                                 ))}
                             </div>

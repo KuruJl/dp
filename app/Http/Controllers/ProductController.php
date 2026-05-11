@@ -4,12 +4,74 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class ProductController extends Controller
 {
+    /**
+     * Отсекает товары с «Тип»/названием не того класса (ошибки импорта категории).
+     * Раньше применялось только в API конфигуратора — без этого в каталоге попадали мониторы/мыши и т.п.
+     */
+    private function applySemanticCategoryGuard(Builder $query, string $categorySlug): void
+    {
+        $typeGuardByCategory = [
+            'korpusa' => ['корпус'],
+            'materinskie-platy' => ['материнская плата'],
+            'processory' => ['процессор', 'cpu'],
+            'kulery-dlia-processora' => ['кулер', 'система охлаждения'],
+            'operativnaia-pamiat' => ['оперативная память', 'dimm'],
+            'videokarty' => ['видеокарта', 'gpu'],
+            // Для M.2 не используем голое «m2» в атрибуте «Тип» — иначе ловятся посторонние позиции.
+            'm2-ssd-nakopiteli' => ['ssd', 'm.2', 'nvme'],
+            'sata-ssd-nakopiteli' => ['ssd', 'sata', '2.5'],
+            'zestkii-disk' => ['жесткий диск', 'hdd'],
+            'bloki-pitaniia' => ['блок питания', 'psu'],
+        ];
+
+        $nameFallbackByCategory = [
+            'korpusa' => ['корпус'],
+            'materinskie-platy' => ['материнская плата'],
+            'processory' => ['процессор', 'cpu'],
+            'kulery-dlia-processora' => ['система охлаждения', 'кулер для процессора', 'водян', 'жидкостн'],
+            'operativnaia-pamiat' => ['оперативная память', 'dimm'],
+            'videokarty' => ['видеокарта', 'gpu'],
+            'm2-ssd-nakopiteli' => ['m.2', 'nvme', 'ssd m.2'],
+            'sata-ssd-nakopiteli' => ['ssd', 'sata', '2.5'],
+            'zestkii-disk' => ['жесткий диск', 'hdd'],
+            'bloki-pitaniia' => ['блок питания', 'psu'],
+        ];
+
+        if (! isset($typeGuardByCategory[$categorySlug])) {
+            return;
+        }
+
+        $allowedKeywords = $typeGuardByCategory[$categorySlug];
+
+        $query->where(function ($guardQuery) use ($allowedKeywords, $categorySlug, $nameFallbackByCategory) {
+            $guardQuery->whereHas('attributes', function ($q) use ($allowedKeywords) {
+                $q->where('attributes.name', 'Тип')
+                    ->where(function ($typeQuery) use ($allowedKeywords) {
+                        foreach ($allowedKeywords as $keyword) {
+                            $typeQuery->orWhere('attribute_product.value', 'like', '%'.$keyword.'%');
+                        }
+                    });
+            })->orWhere(function ($nameQuery) use ($categorySlug, $nameFallbackByCategory) {
+                $nameKeywords = $nameFallbackByCategory[$categorySlug] ?? [];
+                foreach ($nameKeywords as $keyword) {
+                    $nameQuery->orWhere('name', 'like', '%'.$keyword.'%');
+                }
+            });
+        });
+
+        if ($categorySlug === 'kulery-dlia-processora') {
+            $query->whereRaw('LOWER(products.name) NOT LIKE ?', ['%без кулера%'])
+                ->where('products.name', 'not like', 'Процессор%');
+        }
+    }
+
     public function index(Request $request): \Inertia\Response 
     {
         try {
@@ -69,17 +131,68 @@ class ProductController extends Controller
             // Чтобы на выдаче сначала шли товары, у которых реально есть характеристики
             $query->withCount('attributes');
 
-            if ($request->filled('min_price')) $query->where('price', '>=', $request->min_price);
-            if ($request->filled('max_price')) $query->where('price', '<=', $request->max_price);
-            
-            if ($request->has('category') && !empty($request->category)) {
-                $categoryParam = $request->query('category');
-                $categories = is_array($categoryParam) ? $categoryParam : [$categoryParam];
-                $query->whereHas('category', function($q) use ($categories) {
-                    $q->whereIn('slug', $categories)->orWhereIn('id', $categories);
-                });
+            if ($request->filled('min_price')) {
+                $query->where('price', '>=', $request->min_price);
             }
-            
+            if ($request->filled('max_price')) {
+                $query->where('price', '<=', $request->max_price);
+            }
+
+            /** Слаги категорий из URL — чтобы синонимы поиска не подмешивали другие разделы. */
+            $lockedCategorySlugs = null;
+
+            if ($request->has('category')) {
+                $categoryParam = $request->query('category');
+                $items = is_array($categoryParam) ? $categoryParam : [$categoryParam];
+                $items = array_values(array_filter($items, fn ($v) => $v !== null && $v !== ''));
+                if ($items !== []) {
+                    $slugCandidates = [];
+                    $idCandidates = [];
+                    foreach ($items as $item) {
+                        if (is_numeric($item)) {
+                            $idCandidates[] = (int) $item;
+
+                            continue;
+                        }
+                        $s = trim((string) $item);
+                        if ($s !== '') {
+                            $slugCandidates[] = $s;
+                        }
+                    }
+
+                    if ($slugCandidates === [] && $idCandidates === []) {
+                        $query->whereRaw('1 = 0');
+                    } else {
+                        $resolvedIds = Category::query()
+                            ->where(function ($q) use ($slugCandidates, $idCandidates) {
+                                if ($slugCandidates !== []) {
+                                    $q->whereIn('slug', $slugCandidates);
+                                }
+                                if ($idCandidates !== []) {
+                                    $q->orWhereIn('id', $idCandidates);
+                                }
+                            })
+                            ->pluck('id');
+
+                        if ($resolvedIds->isEmpty()) {
+                            $query->whereRaw('1 = 0');
+                        } else {
+                            $query->whereIn('category_id', $resolvedIds);
+                            $lockedCategorySlugs = Category::query()
+                                ->whereIn('id', $resolvedIds)
+                                ->pluck('slug')
+                                ->unique()
+                                ->values()
+                                ->all();
+
+                            if (count($lockedCategorySlugs) === 1) {
+                                $this->applySemanticCategoryGuard($query, $lockedCategorySlugs[0]);
+                            }
+                        }
+                    }
+                }
+            }
+
             if ($request->filled('search')) { 
                 $searchTerm = trim($request->search);
                 $terms = preg_split('/\s+/u', $searchTerm, -1, PREG_SPLIT_NO_EMPTY);
@@ -116,6 +229,10 @@ class ProductController extends Controller
                     }
                 }
                 $matchedCategorySlugs = array_keys($matchedCategorySlugs);
+
+                if ($lockedCategorySlugs !== null && $lockedCategorySlugs !== []) {
+                    $matchedCategorySlugs = array_values(array_intersect($matchedCategorySlugs, $lockedCategorySlugs));
+                }
 
                 // Фильтруем «шумовые» слова, которые уже дали нам категорию
                 $categoryNeedlesFlat = [];
@@ -257,53 +374,7 @@ class ProductController extends Controller
             if (!$category) return response()->json([]); 
             $query->where('category_id', $category->id);
 
-            // Дополнительная защита от "кривой" категоризации после импорта:
-            // проверяем, что характеристика "Тип" соответствует ожидаемому классу товара.
-            $typeGuardByCategory = [
-                'korpusa' => ['корпус'],
-                'materinskie-platy' => ['материнская плата'],
-                'processory' => ['процессор', 'cpu'],
-                'kulery-dlia-processora' => ['кулер', 'система охлаждения'],
-                'operativnaia-pamiat' => ['оперативная память', 'dimm'],
-                'videokarty' => ['видеокарта', 'gpu'],
-                'm2-ssd-nakopiteli' => ['ssd', 'm.2', 'm2'],
-                'sata-ssd-nakopiteli' => ['ssd', 'sata', '2.5'],
-                'zestkii-disk' => ['жесткий диск', 'hdd'],
-                'bloki-pitaniia' => ['блок питания', 'psu'],
-            ];
-
-            $nameFallbackByCategory = [
-                'korpusa' => ['корпус'],
-                'materinskie-platy' => ['материнская плата'],
-                'processory' => ['процессор', 'cpu'],
-                'kulery-dlia-processora' => ['кулер', 'система охлаждения'],
-                'operativnaia-pamiat' => ['оперативная память', 'dimm'],
-                'videokarty' => ['видеокарта', 'gpu'],
-                // Для M.2 не используем общий "m2", чтобы не ловить посторонние товары.
-                'm2-ssd-nakopiteli' => ['m.2', 'nvme', 'ssd m.2'],
-                'sata-ssd-nakopiteli' => ['ssd', 'sata', '2.5'],
-                'zestkii-disk' => ['жесткий диск', 'hdd'],
-                'bloki-pitaniia' => ['блок питания', 'psu'],
-            ];
-
-            if (isset($typeGuardByCategory[$categorySlug])) {
-                $allowedKeywords = $typeGuardByCategory[$categorySlug];
-                $query->where(function ($guardQuery) use ($allowedKeywords, $categorySlug, $nameFallbackByCategory) {
-                    $guardQuery->whereHas('attributes', function ($q) use ($allowedKeywords) {
-                        $q->where('attributes.name', 'Тип')
-                            ->where(function ($typeQuery) use ($allowedKeywords) {
-                                foreach ($allowedKeywords as $keyword) {
-                                    $typeQuery->orWhere('attribute_product.value', 'like', '%' . $keyword . '%');
-                                }
-                            });
-                    })->orWhere(function ($nameQuery) use ($categorySlug, $nameFallbackByCategory) {
-                        $nameKeywords = $nameFallbackByCategory[$categorySlug] ?? [];
-                        foreach ($nameKeywords as $keyword) {
-                            $nameQuery->orWhere('name', 'like', '%' . $keyword . '%');
-                        }
-                    });
-                });
-            }
+            $this->applySemanticCategoryGuard($query, $categorySlug);
         } else {
             return response()->json([]); 
         }

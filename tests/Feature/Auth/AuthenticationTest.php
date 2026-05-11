@@ -4,12 +4,14 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\TestDox;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
 {
     use RefreshDatabase;
 
+    #[TestDox('Экран входа открывается')]
     public function test_login_screen_can_be_rendered(): void
     {
         $response = $this->get('/login');
@@ -17,6 +19,7 @@ class AuthenticationTest extends TestCase
         $response->assertStatus(200);
     }
 
+    #[TestDox('Пользователь может войти через форму входа')]
     public function test_users_can_authenticate_using_the_login_screen(): void
     {
         $user = User::factory()->create();
@@ -30,6 +33,7 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect(route('configurator', absolute: false));
     }
 
+    #[TestDox('Пользователь не может войти с неверным паролем')]
     public function test_users_can_not_authenticate_with_invalid_password(): void
     {
         $user = User::factory()->create();
@@ -42,6 +46,7 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
+    #[TestDox('Пользователь может выйти из системы')]
     public function test_users_can_logout(): void
     {
         $user = User::factory()->create();

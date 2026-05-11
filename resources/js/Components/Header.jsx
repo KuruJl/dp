@@ -26,8 +26,6 @@ export default function Header() {
 
     return (
         <header className="w-full font-man max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between gap-8">
-            
-            {/* 1. ЛОГОТИП */}
              <Link href="/" className="flex-shrink-0 hover:opacity-80 transition">
                 <img 
                     src={logoImg} 
@@ -35,8 +33,7 @@ export default function Header() {
                     className="h-8 md:h-8 w-auto object-contain" 
                 />
             </Link>
-
-            {/* 2. ПОИСК */}
+            
             <div className="flex-1 max-w-2xl relative hidden md:block">
                 <input 
                     type="text" 
@@ -62,13 +59,12 @@ export default function Header() {
                 </button>
             </div>
 
-            {/* 3. НАВИГАЦИЯ */}
             <nav className="flex items-center gap-6 sm:gap-8">
                 <Link href="/catalog" className="flex flex-col items-center text-gray-700 hover:text-[#08004E] transition group">
                     <svg className="w-6 h-6 mb-1 group-hover:scale-110 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
                     <span className="text-xs font-medium">Каталог</span>
                 </Link>
-                
+            
                 <Link href="/cart" className="flex flex-col items-center text-gray-700 hover:text-[#08004E] transition group">
                     <svg className="w-6 h-6 mb-1 group-hover:scale-110 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 0a2 2 0 100 4 2 2 0 000-4z"></path></svg>
                     <span className="text-xs font-medium">Корзина</span>
@@ -86,7 +82,7 @@ export default function Header() {
                     <span className="text-xs font-medium">Конфигуратор</span>
                 </Link>
 
-                {!!user?.is_admin && (
+                {user?.is_admin ? (
                     <Link href="/admin/dashboard" className="flex flex-col items-center text-gray-700 hover:text-[#08004E] transition group">
                         <svg className="w-6 h-6 mb-1 group-hover:scale-110 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"></path>
@@ -94,7 +90,7 @@ export default function Header() {
                         </svg>
                         <span className="text-xs font-medium">Админка</span>
                     </Link>
-                )}
+                ) : null}
 
                 <Link href={user ? "/profile" : "/login"} className="flex flex-col items-center text-gray-700 hover:text-[#08004E] transition group">
                     <svg className="w-6 h-6 mb-1 group-hover:scale-110 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>

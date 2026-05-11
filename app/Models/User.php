@@ -13,20 +13,38 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    protected $fillable =[
-        'name', 'email', 'password', 'phone', 'is_admin', 'provider_name', 'provider_id'
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'phone',
+        'is_admin',
+        'provider_name',
+        'provider_id'
     ];
 
     protected $hidden = [
-        'password', 'remember_token',
+        'password',
+        'remember_token',
     ];
 
-    // Связи пользователя
-    public function orders() { return $this->hasMany(Order::class); }
-    public function assemblies() { return $this->hasMany(Assembly::class); }
-    public function reviews() { return $this->hasMany(Review::class); }
-    public function cart() { return $this->hasOne(Cart::class); }
-     public function favorites()
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
+    public function assemblies()
+    {
+        return $this->hasMany(Assembly::class);
+    }
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
+    public function cart()
+    {
+        return $this->hasOne(Cart::class);
+    }
+    public function favorites()
     {
         return $this->belongsToMany(Product::class, 'favorites');
     }

@@ -40,6 +40,7 @@ export default function AdminLayout({ title, children, active = 'dashboard' }) {
                             <Link href="/admin/categories" className={linkClass('categories')}>Категории</Link>
                             <Link href="/admin/reviews" className={linkClass('reviews')}>Отзывы</Link>
                             <Link href="/admin/products" className={linkClass('products')}>Товары</Link>
+                            <Link href="/admin/reports" className={linkClass('reports')}>Отчёты</Link>
                             <Link href="/admin/promocodes" className={linkClass('promocodes')}>Промокоды</Link>
                             <Link href="/admin/pickup-points" className={linkClass('pickup-points')}>Пункты выдачи</Link>
                         </nav>

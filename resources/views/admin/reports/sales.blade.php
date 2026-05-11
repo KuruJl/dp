@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ $title }}</title>
+    <style>
+        body { font-family: DejaVu Sans, sans-serif; font-size: 10px; }
+        .header { text-align: center; margin-bottom: 16px; }
+        .header h1 { font-size: 16px; margin: 0 0 6px 0; }
+        .header p { margin: 0; color: #444; font-size: 11px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+        th { background: #f2f2f2; font-weight: bold; }
+        td.num { text-align: right; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ $title }}</h1>
+        <p>Период: {{ $subtitle }}</p>
+        <p>Сформировано: {{ now()->format('d.m.Y H:i') }}</p>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                @foreach ($columns as $col)
+                    <th>{{ $col }}</th>
+                @endforeach
+            </tr>
+        </thead>
+        <tbody>
+            @forelse ($rows as $r)
+                <tr>
+                    <td>{{ $r['date'] }}</td>
+                    <td class="num">{{ $r['orders_count'] }}</td>
+                    <td class="num">{{ number_format($r['revenue'], 2, '.', ' ') }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="3">Нет данных за выбранный период.</td></tr>
+            @endforelse
+        </tbody>
+    </table>
+</body>
+</html>

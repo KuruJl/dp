@@ -68,7 +68,6 @@ export default function Main({ tabProducts, hitProducts, categories }) {
         return (
             <div className="bg-white rounded-xl p-5 flex flex-col border border-gray-400 hover:shadow-lg transition-all duration-300 group h-full font-man">
                 
-                {/* Картинка товара */}
                 <Link href={`/products/${product.slug || product.id}`} className="flex-1 flex flex-col">
                     <div className="h-40 w-full mb-4 flex items-center justify-center overflow-hidden">
                         <img 
@@ -78,20 +77,17 @@ export default function Main({ tabProducts, hitProducts, categories }) {
                         />
                     </div>
                     
-                    {/* Название */}
                     <h3 className="text-[15px] font-medium text-black leading-snug mb-4 line-clamp-2 min-h-[40px] flex items-center">
                         {product.name}
                     </h3>
                 </Link>
                 
                 <div className="mt-auto">
-                    {/* Цена и Сердечко */}
                     <div className="flex justify-between items-center mb-4">
                         <span className="text-xl font-bold text-black">
                             {formatPrice(product.price)} ₽
                         </span>
                         
-                        {/* Иконка сердечка */}
                         <button 
                             onClick={toggleFavorite}
                             className={`hover:scale-110 transition-all ${isFavorite ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
@@ -104,7 +100,6 @@ export default function Main({ tabProducts, hitProducts, categories }) {
                         </button>
                     </div>
                     
-                    {/* Кнопка "Добавить в корзину" */}
                     <button 
                         onClick={() => addToCart(product.id)} 
                         className="w-full bg-[#08004E] text-white font-medium py-2.5 rounded-lg hover:bg-opacity-90 active:scale-[0.98] transition-all"
@@ -211,7 +206,6 @@ export default function Main({ tabProducts, hitProducts, categories }) {
                         ))}
                     </div>
 
-                    {/* Сетка товаров категории */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         {tabProducts
                             ?.filter(product => activeTab === 'Все категории' || product.category?.name === activeTab)

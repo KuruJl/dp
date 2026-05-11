@@ -15,6 +15,7 @@ export default function Cart({ cart, total }) {
         discountAmount: 0,
         finalTotal: total || 0,
         loading: false,
+        eligibleHint: '',
     });
 
     // Состояние формы для оформления заказа
@@ -31,7 +32,9 @@ export default function Cart({ cart, total }) {
         email: '',
         delivery_method: 'Доставка курьером',
         payment_method: 'Онлайн',
-        promo_code: ''
+        promo_code: '',
+        delivery_time: '',
+        customer_comment: ''
     });
 
     const [pickupPoints, setPickupPoints] = React.useState([]);
@@ -105,16 +108,23 @@ export default function Cart({ cart, total }) {
     };
 
     const applyPromocode = async () => {
-        setPromoState((prev) => ({ ...prev, loading: true, message: '' }));
+        setPromoState((prev) => ({ ...prev, loading: true, message: '', eligibleHint: '' }));
         try {
             const response = await axios.post('/api/cart/promocode-preview', { promo_code: data.promo_code });
             const payload = response.data;
+            const eb = Number(payload.eligible_base ?? 0);
+            const st = Number(payload.subtotal ?? total ?? 0);
+            const eligibleHint =
+                payload.valid && eb > 0 && st > 0 && eb + 0.001 < st
+                    ? `Скидка считается с ${formatPrice(eb)} ₽ (товары выбранной категории), полная корзина ${formatPrice(st)} ₽.`
+                    : '';
             setPromoState({
                 valid: !!payload.valid,
                 message: payload.message || '',
                 discountAmount: payload.discount_amount || 0,
                 finalTotal: payload.final_total ?? total,
                 loading: false,
+                eligibleHint,
             });
         } catch (error) {
             const message = error?.response?.data?.message || 'Не удалось проверить промокод.';
@@ -124,6 +134,7 @@ export default function Cart({ cart, total }) {
                 discountAmount: 0,
                 finalTotal: total || 0,
                 loading: false,
+                eligibleHint: '',
             });
         }
     };
@@ -134,6 +145,7 @@ export default function Cart({ cart, total }) {
             valid: false,
             discountAmount: 0,
             finalTotal: total || 0,
+            eligibleHint: '',
             message: prev.message ? 'Состав корзины изменился, промокод нужно применить заново.' : '',
         }));
     }, [total]);
@@ -199,11 +211,28 @@ export default function Cart({ cart, total }) {
                                         </div>
 
                                         {/* Инфо */}
-                                        <div className="flex-1 w-full">
+                                        <div className="flex-1 w-full min-w-0">
                                             <Link href={`/products/${item.slug || item.product_id}`} className="text-lg font-bold text-black hover:text-[#08004E] transition leading-snug line-clamp-2">
                                                 {item.name}
                                             </Link>
-                                            <p className="text-xs text-gray-500 mt-2 line-clamp-2">Краткие характеристики товара будут отображаться здесь.</p>
+                                            {item.spec_preview && item.spec_preview.length > 0 ? (
+                                                <p
+                                                    className="text-xs text-gray-600 mt-2 line-clamp-2 leading-snug"
+                                                    title={item.spec_preview
+                                                        .map((s) => `${String(s.name)}: ${String(s.value)}`)
+                                                        .join(' · ')}
+                                                >
+                                                    {item.spec_preview.map((s, idx) => (
+                                                        <span key={`${item.id}-${String(s.name)}-${idx}`}>
+                                                            {idx > 0 ? <span className="text-gray-400 mx-1">·</span> : null}
+                                                            <span className="text-gray-500">{String(s.name)}:</span>{' '}
+                                                            <span className="text-gray-800">{String(s.value)}</span>
+                                                        </span>
+                                                    ))}
+                                                </p>
+                                            ) : (
+                                                <p className="text-xs text-gray-400 mt-2 line-clamp-2 leading-snug">Для товара не указаны характеристики в каталоге.</p>
+                                            )}
                                         </div>
 
                                         {/* Кол-во, Цена и Иконки */}
@@ -351,6 +380,38 @@ export default function Cart({ cart, total }) {
                                         </div>
                                     </div>
 
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-bold text-black mb-2">
+                                                Желаемые дата и время доставки <span className="font-normal text-gray-500">(необязательно)</span>
+                                            </label>
+                                            <input
+                                                type="datetime-local"
+                                                value={data.delivery_time}
+                                                onChange={(e) => setData('delivery_time', e.target.value)}
+                                                className="w-full bg-white border border-gray-400 rounded-md px-4 py-3 text-sm text-black focus:ring-[#08004E] focus:border-[#08004E]"
+                                            />
+                                            {errors.delivery_time && (
+                                                <p className="text-red-600 text-xs mt-1">{errors.delivery_time}</p>
+                                            )}
+                                        </div>
+                                        <div className="md:col-span-1 md:row-span-1 flex flex-col">
+                                            <label className="block text-sm font-bold text-black mb-2">
+                                                Комментарий к заказу <span className="font-normal text-gray-500">(необязательно)</span>
+                                            </label>
+                                            <textarea
+                                                value={data.customer_comment}
+                                                onChange={(e) => setData('customer_comment', e.target.value)}
+                                                rows={4}
+                                                placeholder="Уточнения по адресу, звонку перед доставкой и т.д."
+                                                className="w-full flex-1 min-h-[104px] bg-white border border-gray-400 rounded-md px-4 py-3 text-sm text-black placeholder-gray-400 focus:ring-[#08004E] focus:border-[#08004E] resize-y"
+                                            />
+                                            {errors.customer_comment && (
+                                                <p className="text-red-600 text-xs mt-1">{errors.customer_comment}</p>
+                                            )}
+                                        </div>
+                                    </div>
+
                                     {/* Ряд 4: Способ оплаты */}
                                     <div>
                                         <label className="block text-sm font-bold text-black mb-2">Способ оплаты</label>
@@ -391,6 +452,9 @@ export default function Cart({ cart, total }) {
                                         {promoState.message}
                                     </p>
                                 )}
+                                {promoState.eligibleHint ? (
+                                    <p className="mt-1 text-xs text-gray-600">{promoState.eligibleHint}</p>
+                                ) : null}
                             </div>
 
                             <div className="flex justify-between items-center text-sm text-black mb-3">

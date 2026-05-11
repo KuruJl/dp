@@ -27,13 +27,6 @@ return new class extends Migration
         $table->timestamps();
     });
 
-    // Справочник всех характеристик (Сокет, Мощность, DPI)
-    Schema::create('attributes', function (Blueprint $table) {
-        $table->id();
-        $table->string('name'); // Название характеристики
-        $table->string('type')->default('string'); // string, integer, boolean (для фильтров)
-        $table->timestamps();
-    });
 }
 
     /**
@@ -41,6 +34,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('directories_tables');
+        Schema::dropIfExists('manufacturers');
+        Schema::dropIfExists('categories');
     }
 };

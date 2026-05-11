@@ -90,7 +90,14 @@ class SanitizeProductCategories extends Command
         if (str_contains($searchString, 'm.2') || str_contains($searchString, 'm2')) {
             return ['name' => 'M.2 SSD', 'slug' => 'm2-ssd-nakopiteli'];
         }
-        if (str_contains($searchString, 'ssd') || str_contains($searchString, 'msata') || str_contains($searchString, 'твердотельный')) {
+        if (
+            str_contains($searchString, 'ssd')
+            || str_contains($searchString, 'msata')
+            || str_contains($searchString, 'твердотельный')
+            || str_contains($searchString, 'sata накопитель')
+            || str_contains($searchString, 'sata-накопитель')
+            || (str_contains($searchString, 'sata') && str_contains($searchString, 'накопитель'))
+        ) {
             return ['name' => 'SATA SSD', 'slug' => 'sata-ssd-nakopiteli'];
         }
         if (str_contains($searchString, 'жесткий диск') || str_contains($searchString, 'hdd')) {

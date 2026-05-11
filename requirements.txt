@@ -1,0 +1,5 @@
+# Парсинг DNS (update_images.py, fill_specs.py, create_base_file.py)
+beautifulsoup4>=4.12
+lxml>=5.0
+requests>=2.31
+selenium>=4.15

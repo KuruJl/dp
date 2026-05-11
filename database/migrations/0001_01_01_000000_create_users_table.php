@@ -15,11 +15,10 @@ return new class extends Migration
         $table->id();
         $table->string('name');
         $table->string('email')->unique();
-        $table->string('phone')->nullable(); // Для оформления заказа
-        $table->boolean('is_admin')->default(false); // Для доступа к админке/модерации
+        $table->string('phone')->nullable(); 
+        $table->boolean('is_admin')->default(false);
         $table->timestamp('email_verified_at')->nullable();
         $table->string('password');
-        // Поля для авторизации через соцсети (Socialite)
         $table->string('provider_name')->nullable();
         $table->string('provider_id')->nullable();
         $table->rememberToken();

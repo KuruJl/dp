@@ -2,45 +2,54 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
-use App\Models\User;
 use App\Models\Assembly;
-use App\Models\Comment;
-use App\Models\Component;
+use App\Models\Attribute;
+use App\Models\Cart;
+use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\Manufacturer;
-
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Product;
+use App\Models\ProductImage;
+use App\Models\Promocode;
+use App\Models\Review;
+use App\Models\User;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Отключаем проверку внешних ключей
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        // Используем кросс-БД способ отключения проверок FK.
+        Schema::disableForeignKeyConstraints();
 
-        // 2. Очищаем таблицы. ВАЖНО: сначала таблицы-"дети", потом "родители".
-        // Но с отключенной проверкой порядок не так важен.
-        Comment::truncate();
+        // Транкируем в порядке от "детей" к "родителям".
+        DB::table('assembly_product')->truncate();
         Assembly::truncate();
-        DB::table('assembly_user_like')->truncate(); // Промежуточную таблицу чистим так
-        DB::table('assembly_component')->truncate(); // И эту тоже
-        User::truncate();
-        
-        // Очищаем таблицы компонентов
-        Component::truncate();
-        Category::truncate();
+        DB::table('favorites')->truncate();
+        Review::truncate();
+        OrderItem::truncate();
+        Order::truncate();
+        CartItem::truncate();
+        Cart::truncate();
+        DB::table('attribute_product')->truncate();
+        ProductImage::truncate();
+        Product::truncate();
+        Attribute::truncate();
         Manufacturer::truncate();
+        Category::truncate();
+        Promocode::truncate();
+        User::truncate();
 
-        // 3. Включаем проверку обратно!
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        Schema::enableForeignKeyConstraints();
 
-        // 4. Теперь вызываем все сидеры для наполнения чистых таблиц
         $this->call([
             UserSeeder::class,
             ComponentSeeder::class,
             AssemblySeeder::class,
-
         ]);
     }
 }

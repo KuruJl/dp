@@ -92,7 +92,6 @@ export default function ProductPage({ product, relatedProducts }) {
 
             <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
                 
-                {/* Хлебные крошки */}
                 <nav className="flex text-sm text-gray-500 mb-6">
                     <Link href="/" className="hover:text-[#08004E] transition">Главная</Link>
                     <span className="mx-2">/</span>
@@ -106,10 +105,8 @@ export default function ProductPage({ product, relatedProducts }) {
                 {product ? (
                     <div className="flex flex-col gap-8 w-full font-man">
                         
-                        {/* === ВЕРХНИЙ ЭТАЖ: КАРТИНКА И ПОКУПКА === */}
                         <div className="flex flex-col lg:flex-row gap-8 items-stretch w-full">
                             
-                            {/* ЛЕВАЯ ЧАСТЬ (Только главное фото) - 35% */}
                             <div className="w-full lg:w-[35%] xl:w-[35%] shrink-0">
                                 <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm flex items-center justify-center h-full min-h-[300px] overflow-hidden">
                                      <img 
@@ -120,16 +117,13 @@ export default function ProductPage({ product, relatedProducts }) {
                                 </div>
                             </div>
 
-                            {/* ПРАВАЯ ЧАСТЬ (Блок покупки) - 65% */}
                             <aside className="w-full lg:w-[65%] xl:w-[65%] shrink-0">
                                 <div className="bg-white rounded-xl p-6 md:p-8 border border-gray-200 shadow-sm flex flex-col gap-5 h-full">
                                     
-                                    {/* Название и Рейтинг */}
                                     <div>
                                         <h1 className="text-xl sm:text-2xl md:text-2xl font-extrabold text-black leading-snug">
                                             {product.name}
                                         </h1>
-                                        {/* === ДОБАВЛЕН БЛОК РЕЙТИНГА === */}
                                         <div className="flex items-center gap-2 mt-3">
                                             <div className="flex">
                                                 {[1, 2, 3, 4, 5].map(star => (
@@ -141,7 +135,6 @@ export default function ProductPage({ product, relatedProducts }) {
                                         </div>
                                     </div>
 
-                                    {/* Наличие и Код */}
                                     <div className="flex justify-between items-center text-xs sm:text-sm pb-4 border-b border-gray-100 mt-2">
                                         <span className={`${isInStock ? 'text-green-700 bg-green-50 border border-green-200' : 'text-red-600 bg-red-50 border border-red-200'} px-3 py-1.5 rounded-full font-bold flex items-center gap-1`}>
                                             {isInStock ? (
@@ -151,10 +144,8 @@ export default function ProductPage({ product, relatedProducts }) {
                                         <span className="text-gray-400 font-medium">Код товара: {product.id}</span>
                                     </div>
 
-                                    {/* === БЛОК ЦЕНЫ И ПОКУПКИ === */}
                                     <div className="bg-[#F8F9FA] rounded-xl p-5 border border-gray-200 mt-auto">
                                         <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 mb-5">
-                                            {/* Цена */}
                                             <div>
                                                 <p className="text-xs text-gray-500 font-medium mb-1">Цена за 1 шт.</p>
                                                 <div className="text-3xl sm:text-3xl font-extrabold text-black tracking-tight flex items-baseline gap-1.5">

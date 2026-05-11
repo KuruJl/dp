@@ -1,9 +1,13 @@
 import React from 'react';
 import Header from '@/Components/Header';
 import Footer from '@/Components/Footer';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 
 export default function Login({ status, canResetPassword }) {
+    const inertiaErrors = usePage().props.errors ?? {};
+    const socialErrorRaw = inertiaErrors.social;
+    const socialError = Array.isArray(socialErrorRaw) ? socialErrorRaw[0] : socialErrorRaw;
+
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
@@ -35,6 +39,12 @@ export default function Login({ status, canResetPassword }) {
                     {status && (
                         <div className="mb-6 text-sm font-bold text-green-600 bg-green-50 p-4 rounded-lg border border-green-200">
                             {status}
+                        </div>
+                    )}
+
+                    {socialError && (
+                        <div className="mb-6 text-sm font-medium text-red-700 bg-red-50 p-4 rounded-lg border border-red-200">
+                            {socialError}
                         </div>
                     )}
 

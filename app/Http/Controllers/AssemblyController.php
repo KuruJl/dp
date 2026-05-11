@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Auth;
 
 class AssemblyController extends Controller
 {
-    // Метод проверки совместимости (возвращает 422 для React)
     public function checkCompatibility(Request $request, CompatibilityService $service)
     {
         $componentIds = $request->input('component_ids', []);
@@ -27,7 +26,7 @@ class AssemblyController extends Controller
             return response()->json([
                 'compatible' => false,
                 'errors' => $errors,
-            ], 422); // React ждет именно 422!
+            ], 422); 
         }
 
         return response()->json([
@@ -64,7 +63,6 @@ class AssemblyController extends Controller
     {
         $assembly->load('products.category', 'products.images', 'products.attributes');
         
-        // Маскируем products под components для твоего React
         $assembly->components = $assembly->products->map(function($product) {
             $product->image_url = $product->images->first()?->path;
             if ($product->category) {
@@ -73,7 +71,6 @@ class AssemblyController extends Controller
             return $product;
         });
 
-        // Прячем оригинальный массив products, чтобы не путать фронт
         $assembly->makeHidden('products');
 
         return response()->json($assembly);

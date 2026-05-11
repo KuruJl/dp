@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -44,5 +45,36 @@ class ReviewController extends Controller
         ]);
 
         return back()->with('success', 'Спасибо! Ваш отзыв отправлен на модерацию и скоро появится на сайте.');
+    }
+
+    public function update(Request $request, Review $review)
+    {
+        if ($review->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+            'body' => 'required|string|min:5|max:1000',
+        ]);
+
+        $review->update([
+            'rating' => $validated['rating'],
+            'body' => $validated['body'],
+            'is_approved' => false,
+        ]);
+
+        return redirect()->route('profile.reviews')->with('success', 'Отзыв обновлён и снова отправлен на модерацию.');
+    }
+
+    public function destroy(Request $request, Review $review)
+    {
+        if ($review->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $review->delete();
+
+        return redirect()->route('profile.reviews')->with('success', 'Отзыв удалён.');
     }
 }

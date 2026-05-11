@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage, router } from '@inertiajs/react';
 import Header from '@/Components/Header';
 import Footer from '@/Components/Footer';
 import ProfileSidebar from '@/Components/ProfileSidebar';
 
+const cancellableStatuses = ['новый', 'ожидает оплаты'];
+
 export default function Orders({ orders = [] }) {
-    const { auth } = usePage().props;
+    const { auth, flash } = usePage().props;
     const user = auth?.user;
     const formatPrice = (val) => new Intl.NumberFormat('ru-RU').format(val || 0);
     const [expanded, setExpanded] = useState({});
@@ -37,6 +39,17 @@ export default function Orders({ orders = [] }) {
 
                     <section className="flex-1 w-full bg-white rounded-xl p-6 md:p-8 border border-gray-200 shadow-sm min-w-0">
                         <h2 className="text-2xl font-extrabold text-black mb-6">Мои заказы</h2>
+
+                        {flash?.success && (
+                            <div className="mb-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                                {flash.success}
+                            </div>
+                        )}
+                        {flash?.error && (
+                            <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                                {flash.error}
+                            </div>
+                        )}
 
                         {orders.length === 0 ? (
                             <div className="text-center py-12 border border-dashed border-gray-300 rounded-lg bg-gray-50">
@@ -164,7 +177,7 @@ export default function Orders({ orders = [] }) {
                                                         ))}
                                                     </div>
 
-                                                    <div className="mt-5 pt-4 border-t border-gray-200 flex items-center justify-between">
+                                                    <div className="mt-5 pt-4 border-t border-gray-200 flex flex-wrap items-center justify-between gap-3">
                                                         <div className="flex flex-col">
                                                             {Number(order.discount_amount || 0) > 0 && (
                                                                 <div className="flex items-center justify-between gap-4 text-sm mb-1">
@@ -177,6 +190,30 @@ export default function Orders({ orders = [] }) {
                                                         <span className="text-xl font-extrabold text-black">
                                                             {formatPrice(order.total_amount)} ₽
                                                         </span>
+                                                    </div>
+
+                                                    <div className="mt-4 flex flex-wrap gap-3">
+                                                        {cancellableStatuses.includes(order.status) && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    if (!window.confirm('Отменить заказ? Остатки товаров будут возвращены на склад.')) return;
+                                                                    router.post(`/profile/orders/${order.id}/cancel`);
+                                                                }}
+                                                                className="text-sm font-semibold text-red-700 border border-red-300 rounded-lg px-4 py-2 hover:bg-red-50 transition"
+                                                            >
+                                                                Отменить заказ
+                                                            </button>
+                                                        )}
+                                                        {order.status !== 'отменен' && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => router.post(`/profile/orders/${order.id}/reorder`)}
+                                                                className="text-sm font-semibold text-[#08004E] border border-[#08004E]/40 rounded-lg px-4 py-2 hover:bg-[#08004E]/5 transition"
+                                                            >
+                                                                В корзину снова
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             )}
