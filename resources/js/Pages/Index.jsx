@@ -298,7 +298,7 @@ export default function Index({ editingAssemblyId = null, loadAssemblyId = null 
             <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
                 <h1 className="text-3xl md:text-4xl font-extrabold text-black text-center mb-10">Конфигуратор</h1>
 
-                <div className="border border-gray-400 rounded-xl p-6 md:p-10 flex flex-col lg:flex-row items-start gap-10 bg-transparent relative">
+                <div className="border border-gray-400 rounded-xl p-4 sm:p-6 md:p-10 flex flex-col lg:flex-row items-start gap-6 lg:gap-10 bg-transparent relative">
                     
                     <div className="flex-1 w-full min-w-0">
                         <div className="mb-6">
@@ -306,24 +306,23 @@ export default function Index({ editingAssemblyId = null, loadAssemblyId = null 
                             <p className="text-sm text-gray-500">*обязательные комплектующие</p>
                         </div>
 
-                        <div className="flex flex-col gap-3">
+                        <div className="flex flex-col gap-2 sm:gap-3">
                             {componentSlots.map(slot => {
                                 const slotKey = getSlotKey(slot);
                                 const selectedItem = assembly[slotKey];
 
                                 return selectedItem ? (
-                                    <div key={slotKey} className="bg-white border-2 border-[#08004E] rounded-md p-3 flex items-center gap-4 shadow-sm transition">
-                                        <div className="w-32 md:w-40 font-bold text-sm text-black shrink-0">{slot.displayName}</div>
-                                        <div className="w-12 h-12 shrink-0 flex items-center justify-center p-1 bg-gray-50 rounded">
+                                    <div key={slotKey} className="bg-white border-2 border-[#08004E] rounded-md p-2.5 sm:p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 md:gap-4 shadow-sm transition min-w-0">
+                                        <p className="text-[10px] leading-tight font-bold text-[#08004E] sm:text-black sm:w-28 md:w-36 lg:w-40 sm:shrink-0">{slot.displayName}</p>
+                                        <div className="flex flex-col items-center gap-1.5 w-full min-w-0 sm:flex-row sm:items-center sm:flex-1 sm:gap-3">
+                                        <div className="w-14 h-14 sm:w-10 sm:h-10 md:w-12 md:h-12 shrink-0 flex items-center justify-center p-1 bg-gray-50 rounded mx-auto sm:mx-0">
                                             <img src={selectedItem.image_url || '/images/default_product.png'} alt="img" className="max-w-full max-h-full object-contain" />
                                         </div>
-                                        <div className="flex-1 flex flex-col justify-center min-w-0 py-2 pr-4">
-                                            
-                                            <p className="text-sm font-bold text-black leading-snug mb-1">
+                                        <div className="w-full min-w-0 text-center sm:text-left px-0.5 sm:px-0 sm:flex-1">
+                                            <p className="text-[11px] sm:text-sm font-bold text-black leading-snug line-clamp-3 sm:line-clamp-2">
                                                 {getCleanName(selectedItem.name)}
                                             </p>
-                                            
-                                            <p className="text-[11px] text-gray-500 leading-relaxed line-clamp-2">
+                                            <p className="text-[10px] sm:text-[11px] text-gray-500 leading-snug line-clamp-2 mt-0.5">
                                                 {selectedItem.attributes && selectedItem.attributes.length > 0 
                                                     ? selectedItem.attributes.map(attr => attr.pivot.value).join(', ')
                                                     : selectedItem.description
@@ -331,26 +330,29 @@ export default function Index({ editingAssemblyId = null, loadAssemblyId = null 
                                             </p>
                                             
                                         </div>
-                                        <div className="text-lg font-extrabold text-black whitespace-nowrap shrink-0">
-                                            {formatPrice(selectedItem.price)} ₽
                                         </div>
-                                        <div className="flex items-center gap-3 shrink-0 ml-2">
-                                            <button onClick={() => handlePlaceholderClick(slot)} className="text-gray-500 hover:text-[#08004E] transition" title="Заменить">
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                        <div className="flex items-center justify-between gap-2 w-full pt-1.5 border-t border-gray-100 sm:border-0 sm:pt-0 sm:w-auto sm:shrink-0 sm:flex-col sm:items-end sm:gap-1">
+                                            <span className="text-xs sm:text-base md:text-lg font-extrabold text-black tabular-nums whitespace-nowrap">
+                                                {formatPrice(selectedItem.price)} ₽
+                                            </span>
+                                            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                                            <button type="button" onClick={() => handlePlaceholderClick(slot)} className="p-1 text-gray-500 hover:text-[#08004E] transition" title="Заменить">
+                                                <svg className="w-3.5 h-3.5 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                                             </button>
-                                            <button onClick={(e) => handleComponentClear(slotKey, e)} className="text-gray-500 hover:text-red-500 transition" title="Удалить">
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                            <button type="button" onClick={(e) => handleComponentClear(slotKey, e)} className="p-1 text-gray-500 hover:text-red-500 transition" title="Удалить">
+                                                <svg className="w-3.5 h-3.5 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                             </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div key={slotKey} onClick={() => handlePlaceholderClick(slot)} className="bg-white/50 border border-gray-300 rounded-md p-3 flex items-center gap-4 cursor-pointer hover:border-[#08004E] hover:bg-white transition group h-[76px]">
-                                        <div className="w-32 md:w-40 font-bold text-sm text-black shrink-0">{slot.displayName}</div>
-                                        <div className="flex-1 flex items-center justify-center">
-                                            <div className="text-gray-400 group-hover:text-[#08004E] transition flex items-center gap-2 text-sm font-medium">
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+                                    <div key={slotKey} onClick={() => handlePlaceholderClick(slot)} className="bg-white/50 border border-gray-300 rounded-md p-2.5 sm:p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 cursor-pointer hover:border-[#08004E] hover:bg-white transition group min-h-0 sm:min-h-[76px]">
+                                        <p className="text-[10px] leading-tight font-bold text-black sm:w-28 md:w-36 lg:w-40 sm:shrink-0">{slot.displayName}</p>
+                                        <div className="flex flex-1 items-center justify-center py-3 sm:py-0 min-h-[52px] sm:min-h-0">
+                                            <span className="text-gray-400 group-hover:text-[#08004E] transition flex items-center gap-1.5 text-xs sm:text-sm font-medium">
+                                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
                                                 Выбрать
-                                            </div>
+                                            </span>
                                         </div>
                                     </div>
                                 );

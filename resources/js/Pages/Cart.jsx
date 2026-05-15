@@ -204,15 +204,14 @@ export default function Cart({ cart, total }) {
                             {/* СПИСОК ТОВАРОВ В КОРЗИНЕ */}
                             <div className="flex flex-col gap-4">
                                 {cart.map(item => (
-                                    <div key={item.id} className="bg-white rounded-xl p-6 flex flex-col md:flex-row items-center gap-6 shadow-sm border border-gray-200">
-                                        {/* Картинка */}
-                                        <div className="w-32 h-24 shrink-0 flex items-center justify-center p-2">
+                                    <div key={item.id} className="bg-white rounded-xl p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 shadow-sm border border-gray-200">
+                                        <div className="w-22 h-18 sm:w-32 sm:h-24 shrink-0 flex items-center justify-center p-2">
                                             <img src={item.image || '/images/default_product.png'} alt={item.name} className="max-h-full max-w-full object-contain" />
                                         </div>
 
                                         {/* Инфо */}
                                         <div className="flex-1 w-full min-w-0">
-                                            <Link href={`/products/${item.slug || item.product_id}`} className="text-lg font-bold text-black hover:text-[#08004E] transition leading-snug line-clamp-2">
+                                            <Link href={`/products/${item.slug || item.product_id}`} className="text-sm sm:text-lg font-bold text-black hover:text-[#08004E] transition leading-snug line-clamp-2">
                                                 {item.name}
                                             </Link>
                                             {item.spec_preview && item.spec_preview.length > 0 ? (
@@ -246,7 +245,7 @@ export default function Cart({ cart, total }) {
 
                                             {/* Блок цены и иконок */}
                                             <div className="flex flex-col items-end gap-2">
-                                                <div className="text-2xl font-extrabold text-black whitespace-nowrap">
+                                                <div className="text-lg sm:text-2xl font-extrabold text-black whitespace-nowrap">
                                                     {formatPrice(item.price * item.quantity)} ₽
                                                 </div>
                                                 <div className="flex items-center gap-3 text-black">

@@ -158,10 +158,10 @@ export default function Main({ tabProducts, hitProducts, categories }) {
 
                     <Link 
                         href="/configurator" 
-                        className="relative w-full lg:w-1/3 h-[300px] sm:h-[400px] rounded-2xl bg-[#08004E] p-8 sm:p-10 flex flex-col justify-center overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group"
+                        className="relative w-full lg:w-1/3 h-[150px] sm:h-[400px] rounded-2xl bg-[#08004E] p-6 sm:p-10 flex flex-col justify-center overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group"
                     >
                         <div className="absolute -top-10 -right-10 w-40 h-40 bg-white opacity-5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
-                        <h2 className="text-white text-3xl sm:text-4xl font-extrabold leading-snug relative z-10">
+                        <h2 className="text-white text-2xl sm:text-4xl font-extrabold leading-snug relative z-10">
                             Собери<br/>компьютер с<br/>проверкой<br/>комплектующих
                         </h2>
                         <div className="absolute bottom-8 right-8 text-white opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all duration-300">

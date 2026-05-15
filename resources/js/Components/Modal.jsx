@@ -13,12 +13,11 @@ export default function Modal({ isOpen, onClose, title, children }) {
         >
 
             <div
-                className="w-full max-w-7xl bg-white text-black rounded-xl shadow-2xl flex flex-col max-h-[85vh] border border-gray-200"
+                className="w-[calc(100%-1.5rem)] sm:w-full max-w-7xl mx-3 sm:mx-auto bg-white text-black rounded-xl shadow-2xl flex flex-col max-h-[95vh] sm:max-h-[85vh] border border-gray-200"
                 onClick={e => e.stopPropagation()}
             >
-                {/* --- 3. Шапка окна --- */}
-                <div className="flex justify-between items-center p-5 border-b border-gray-200">
-                    <h3 className="text-xl md:text-2xl font-extrabold">{title}</h3>
+                <div className="flex justify-between items-center p-4 sm:p-5 border-b border-gray-200 shrink-0">
+                    <h3 className="text-lg sm:text-xl md:text-2xl font-extrabold pr-2">{title}</h3>
                     <button
                         onClick={onClose}
                         className="text-gray-400 hover:text-[#08004E] text-3xl leading-none transition-colors"
@@ -30,7 +29,7 @@ export default function Modal({ isOpen, onClose, title, children }) {
 
 
 
-                <div className="p-6 max-w-7xl overflow-y-auto">
+                <div className="p-4 sm:p-6 max-w-7xl overflow-y-auto flex-1 min-h-0">
                     {children}
                 </div>
 

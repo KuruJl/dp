@@ -47,7 +47,26 @@ export default function ComponentSelectorModal({ isOpen, onClose, categoryInfo, 
     });
     
     const [searchQuery, setSearchQuery] = useState('');
+    const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
     const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+    useEffect(() => {
+        if (!isOpen || !mobileFiltersOpen) {
+            return;
+        }
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        const onKey = (e) => {
+            if (e.key === 'Escape') {
+                setMobileFiltersOpen(false);
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => {
+            document.body.style.overflow = prev;
+            window.removeEventListener('keydown', onKey);
+        };
+    }, [isOpen, mobileFiltersOpen]);
 
     const generateExportUrl = () => {
         const params = new URLSearchParams();
@@ -184,8 +203,28 @@ export default function ComponentSelectorModal({ isOpen, onClose, categoryInfo, 
             onClose={onClose}
             title={`Выберите ${categoryInfo?.displayName || 'компонент'}`}
         >
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-black">
-                <aside className="col-span-1 border-r border-gray-200 pr-6 max-h-[65vh] overflow-y-auto">
+            <div className="flex flex-col lg:grid lg:grid-cols-4 gap-4 lg:gap-6 text-black">
+                <div className="lg:hidden flex flex-col gap-3 shrink-0">
+                    <input
+                        type="text"
+                        placeholder="Поиск по названию..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full p-2.5 bg-white border border-gray-300 rounded-md text-sm text-black placeholder-gray-400 focus:ring-[#08004E] focus:border-[#08004E]"
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setMobileFiltersOpen(true)}
+                        className="inline-flex items-center justify-center gap-2 h-10 px-4 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 bg-white hover:border-[#08004E] hover:text-[#08004E] transition"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9M3 12h6M3 16h3M14 8l4 4-4 4" />
+                        </svg>
+                        Фильтры
+                    </button>
+                </div>
+
+                <aside className="hidden lg:block col-span-1 border-r border-gray-200 pr-6 max-h-[65vh] overflow-y-auto">
                     <div className="mb-5">
                         <input
                             type="text"
@@ -257,7 +296,99 @@ export default function ComponentSelectorModal({ isOpen, onClose, categoryInfo, 
                     </button>
                 </aside>
 
-                <main className="col-span-3 flex flex-col max-h-[60vh]">
+                {mobileFiltersOpen ? (
+                    <div className="fixed inset-0 z-[60] lg:hidden">
+                        <button
+                            type="button"
+                            className="absolute inset-0 bg-black/50"
+                            aria-label="Закрыть фильтры"
+                            onClick={() => setMobileFiltersOpen(false)}
+                        />
+                        <div className="absolute inset-y-0 left-0 w-[min(100%,320px)] bg-white shadow-xl flex flex-col">
+                            <div className="flex items-center justify-between p-4 border-b border-gray-200 shrink-0">
+                                <h2 className="text-lg font-bold text-black">Фильтры</h2>
+                                <button
+                                    type="button"
+                                    onClick={() => setMobileFiltersOpen(false)}
+                                    className="text-gray-500 hover:text-[#08004E] text-2xl leading-none"
+                                    aria-label="Закрыть"
+                                >
+                                    &times;
+                                </button>
+                            </div>
+                            <aside className="flex-1 overflow-y-auto p-4 border-0 max-h-none">
+                                <h3 className="font-bold mb-3 text-base">Цена</h3>
+                                <div className="grid grid-cols-2 gap-2 mb-5">
+                                    <input
+                                        type="number"
+                                        value={activeFilters.minPrice}
+                                        onChange={(e) => setActiveFilters((prev) => ({ ...prev, minPrice: e.target.value }))}
+                                        placeholder={`от ${availableFilters.price?.min ?? 0}`}
+                                        className="w-full p-2 bg-white border border-gray-300 rounded-md text-sm focus:ring-[#08004E] focus:border-[#08004E]"
+                                    />
+                                    <input
+                                        type="number"
+                                        value={activeFilters.maxPrice}
+                                        onChange={(e) => setActiveFilters((prev) => ({ ...prev, maxPrice: e.target.value }))}
+                                        placeholder={`до ${availableFilters.price?.max ?? 0}`}
+                                        className="w-full p-2 bg-white border border-gray-300 rounded-md text-sm focus:ring-[#08004E] focus:border-[#08004E]"
+                                    />
+                                </div>
+                                <h3 className="font-bold mb-3 text-base">Производитель</h3>
+                                <div className="space-y-2 text-sm mb-5">
+                                    {availableFilters.manufacturers.map((m) => (
+                                        <label key={m.id} className="flex items-center space-x-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                className="rounded border-gray-300 text-[#08004E] focus:ring-[#08004E]"
+                                                checked={activeFilters.manufacturers.includes(m.id)}
+                                                onChange={() => handleManufacturerFilterChange(m.id)}
+                                            />
+                                            <span>{m.name}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                                {importantSpecs.map(([specName, values]) => (
+                                    <div key={specName} className="mt-5">
+                                        <h4 className="font-bold mb-2 text-sm">{specName}</h4>
+                                        <div className="space-y-2 text-sm max-h-32 overflow-y-auto pr-1">
+                                            {values.slice(0, 8).map((value) => (
+                                                <label key={`${specName}-${value}`} className="flex items-center space-x-2 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="rounded border-gray-300 text-[#08004E] focus:ring-[#08004E]"
+                                                        checked={(activeFilters.specs[specName] || []).includes(value)}
+                                                        onChange={() => handleSpecFilterChange(specName, value)}
+                                                    />
+                                                    <span className="line-clamp-1">{value}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        resetFilters();
+                                        setMobileFiltersOpen(false);
+                                    }}
+                                    className="mt-6 w-full border border-gray-300 text-gray-700 font-semibold text-sm py-2.5 rounded-md hover:bg-gray-50 transition"
+                                >
+                                    Сбросить фильтры
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setMobileFiltersOpen(false)}
+                                    className="mt-2 w-full bg-[#08004E] text-white font-semibold text-sm py-2.5 rounded-md hover:bg-opacity-90 transition"
+                                >
+                                    Показать
+                                </button>
+                            </aside>
+                        </div>
+                    </div>
+                ) : null}
+
+                <main className="lg:col-span-3 flex flex-col max-h-[50vh] sm:max-h-[60vh] min-h-0">
                     <div className="flex items-center justify-between mb-4 flex-shrink-0">
                         <p className="text-sm text-gray-500">
                             {paginationMeta.total > 0
@@ -279,7 +410,7 @@ export default function ComponentSelectorModal({ isOpen, onClose, categoryInfo, 
                         {isLoading ? (
                             <p className="text-gray-500">Загрузка...</p>
                         ) : (
-                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {components.map(component => (
                                     <ProductCard
                                         key={component.id}

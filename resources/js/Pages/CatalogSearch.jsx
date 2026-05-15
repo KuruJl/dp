@@ -27,6 +27,7 @@ export default function CatalogSearch({ products, categories }) {
         specs: {},
     });
     const [sortBy, setSortBy] = useState('popular');
+    const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
     
     // Загружаем фильтры с нашего бэкенда при загрузке страницы
     useEffect(() => {
@@ -214,6 +215,48 @@ export default function CatalogSearch({ products, categories }) {
         appliedFilters.maxPrice !== (availableFilters.price?.max ?? '') ||
         sortBy !== 'popular';
 
+    const activeFiltersCount = useMemo(() => {
+        let count = appliedFilters.manufacturers.length;
+        count += Object.values(appliedFilters.specs).reduce((sum, arr) => sum + arr.length, 0);
+        const defaultMin = availableFilters.price?.min ?? '';
+        const defaultMax = availableFilters.price?.max ?? '';
+        if (appliedFilters.minPrice !== '' && String(appliedFilters.minPrice) !== String(defaultMin)) {
+            count += 1;
+        }
+        if (appliedFilters.maxPrice !== '' && String(appliedFilters.maxPrice) !== String(defaultMax)) {
+            count += 1;
+        }
+        return count;
+    }, [appliedFilters, availableFilters.price]);
+
+    useEffect(() => {
+        if (!mobileFiltersOpen) {
+            return;
+        }
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        const onKey = (e) => {
+            if (e.key === 'Escape') {
+                setMobileFiltersOpen(false);
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => {
+            document.body.style.overflow = prev;
+            window.removeEventListener('keydown', onKey);
+        };
+    }, [mobileFiltersOpen]);
+
+    const applyFiltersAndClose = () => {
+        applyFilters();
+        setMobileFiltersOpen(false);
+    };
+
+    const resetFiltersAndClose = () => {
+        resetFilters();
+        setMobileFiltersOpen(false);
+    };
+
     const handleSortChange = (nextSort) => {
         setSortBy(nextSort);
         if (!currentCategorySlug) return;
@@ -243,15 +286,14 @@ export default function CatalogSearch({ products, categories }) {
         ].includes(product.category?.slug);
 
         return (
-            <div className="bg-white rounded-xl p-6 flex flex-col md:flex-row gap-6 items-center hover:shadow-md transition-shadow duration-300 border border-transparent hover:border-gray-200">
-                {/* ... Картинка и Инфо остаются без изменений ... */}
-                <Link href={`/products/${product.slug || product.id}`} className="w-full md:w-56 h-40 flex-shrink-0 flex items-center justify-center p-2">
+            <div className="bg-white rounded-xl p-4 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-6 items-center hover:shadow-md transition-shadow duration-300 border border-transparent hover:border-gray-200">
+                <Link href={`/products/${product.slug || product.id}`} className="w-full sm:w-40 md:w-56 h-28 sm:h-40 flex-shrink-0 flex items-center justify-center p-2">
                     <img src={product.image_url || '/images/default_product.png'} alt={product.name} className="max-h-full max-w-full object-contain hover:scale-105 transition-transform duration-500" />
                 </Link>
 
                  <div className="flex-1 w-full">
                 <Link href={`/products/${product.slug || product.id}`}>
-                    <h3 className="text-lg font-bold text-black leading-snug hover:text-[#08004E] transition-colors">{product.name}</h3>
+                    <h3 className="text-sm sm:text-lg font-bold text-black leading-snug hover:text-[#08004E] transition-colors">{product.name}</h3>
                 </Link>
                 
                 {/* === УМНОЕ ОПИСАНИЕ (Характеристики) === */}
@@ -282,8 +324,8 @@ export default function CatalogSearch({ products, categories }) {
             </div>
 
                 {/* Цена и кнопки */}
-                <div className="w-full md:w-48 flex flex-col items-end gap-4 shrink-0">
-                    <div className="text-2xl font-extrabold text-black whitespace-nowrap">
+                <div className="w-full sm:w-48 flex flex-col items-stretch sm:items-end gap-3 sm:gap-4 shrink-0">
+                    <div className="text-lg sm:text-2xl font-extrabold text-black whitespace-nowrap">
                         {formatPrice(product.price)} ₽
                     </div>
                     
@@ -377,6 +419,54 @@ export default function CatalogSearch({ products, categories }) {
         );
     };
 
+    const filtersPanelContent = (onApply, onReset) => (
+        <>
+            <div className="mb-6">
+                <h3 className="font-bold text-black mb-3">Цена</h3>
+                <div className="flex items-center gap-2">
+                    <input
+                        type="number"
+                        value={minPrice}
+                        onChange={(e) => setMinPrice(e.target.value)}
+                        placeholder={`от ${availableFilters.price?.min || 0}`}
+                        className="w-1/2 bg-white border border-gray-400 rounded-md px-3 py-1.5 text-sm text-black placeholder-gray-500 focus:ring-[#08004E] focus:border-[#08004E]"
+                    />
+                    <input
+                        type="number"
+                        value={maxPrice}
+                        onChange={(e) => setMaxPrice(e.target.value)}
+                        placeholder={`до ${availableFilters.price?.max || 100000}`}
+                        className="w-1/2 bg-white border border-gray-400 rounded-md px-3 py-1.5 text-sm text-black placeholder-gray-500 focus:ring-[#08004E] focus:border-[#08004E]"
+                    />
+                </div>
+            </div>
+            <FilterBlock
+                title="Бренд"
+                items={availableFilters.manufacturers}
+                selectedValues={selectedManufacturers}
+                onToggle={toggleManufacturer}
+            />
+            {availableFilters.specs &&
+                Object.entries(availableFilters.specs).map(([specName, specValues]) => (
+                    <FilterBlock
+                        key={specName}
+                        title={specName}
+                        items={specValues}
+                        selectedValues={selectedSpecs[specName] || []}
+                        onToggle={(value) => toggleSpecValue(specName, value)}
+                    />
+                ))}
+            <div className="flex gap-2 mt-2">
+                <button type="button" onClick={onApply} className="flex-1 h-10 bg-[#08004E] text-white text-sm font-semibold rounded-lg hover:bg-opacity-90 transition-colors">
+                    Применить
+                </button>
+                <button type="button" onClick={onReset} className="h-10 px-3 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+                    Сброс
+                </button>
+            </div>
+        </>
+    );
+
     return (
         <div className="min-h-screen flex flex-col font-man">
             <Head title={pageTitle} />
@@ -384,88 +474,44 @@ export default function CatalogSearch({ products, categories }) {
 
             <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
                 
-                <h1 className="text-3xl font-extrabold text-black mb-8">{pageTitle}</h1>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-black mb-6 sm:mb-8 break-words">{pageTitle}</h1>
 
                 <div className="flex flex-col lg:flex-row gap-6 items-start w-full">
-                    
-                    {/* ЛЕВЫЙ САЙДБАР (Теперь с белым фоном, паддингами и скруглениями как на макете) */}
-                    <aside className="w-full lg:w-[280px] shrink-0 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                        
-                        {/* Фильтр: Цена */}
-                        <div className="mb-6">
-                            <h3 className="font-bold text-black mb-3">Цена</h3>
-                            <div className="flex items-center gap-2">
-                                <input 
-                                    type="number" 
-                                    value={minPrice}
-                                    onChange={(e) => setMinPrice(e.target.value)}
-                                    placeholder={`от ${availableFilters.price?.min || 0}`} 
-                                    className="w-1/2 bg-white border border-gray-400 rounded-md px-3 py-1.5 text-sm text-black placeholder-gray-500 focus:ring-[#08004E] focus:border-[#08004E]" 
-                                />
-                                <input 
-                                    type="number" 
-                                    value={maxPrice}
-                                    onChange={(e) => setMaxPrice(e.target.value)}
-                                    placeholder={`до ${availableFilters.price?.max || 100000}`} 
-                                    className="w-1/2 bg-white border border-gray-400 rounded-md px-3 py-1.5 text-sm text-black placeholder-gray-500 focus:ring-[#08004E] focus:border-[#08004E]" 
-                                />
-                            </div>
-                        </div>
-
-                        {/* Фильтр: Бренд */}
-                        <FilterBlock
-                            title="Бренд"
-                            items={availableFilters.manufacturers}
-                            selectedValues={selectedManufacturers}
-                            onToggle={toggleManufacturer}
-                        />
-
-                        {/* Динамические фильтры EAV */}
-                        {availableFilters.specs && Object.entries(availableFilters.specs).map(([specName, specValues]) => (
-                            <FilterBlock
-                                key={specName}
-                                title={specName}
-                                items={specValues}
-                                selectedValues={selectedSpecs[specName] || []}
-                                onToggle={(value) => toggleSpecValue(specName, value)}
-                            />
-                        ))}
-                        <div className="flex gap-2 mt-2">
-                            <button
-                                type="button"
-                                onClick={applyFilters}
-                                className="flex-1 h-10 bg-[#08004E] text-white text-sm font-semibold rounded-lg hover:bg-opacity-90 transition-colors"
-                            >
-                                Применить
-                            </button>
-                            <button
-                                type="button"
-                                onClick={resetFilters}
-                                className="h-10 px-3 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors"
-                            >
-                                Сброс
-                            </button>
-                        </div>
+                    <aside className="hidden lg:block w-full lg:w-[280px] shrink-0 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                        {filtersPanelContent(applyFilters, resetFilters)}
                     </aside>
 
-                    {/* ПРАВАЯ ЧАСТЬ (Товары) */}
-                    {/* Заставляем правую часть занять ровно всю оставшуюся ширину: calc(100% - 280px - gap) */}
-                    <section className="flex-1 w-full" style={{ maxWidth: 'calc(100% - 312px)' }}>
-                        
-                        {/* Плашка сортировки */}
-                        <div className="bg-white rounded-xl py-3 px-5 mb-4 flex items-center justify-between shadow-sm border border-gray-200">
-                            <div className="text-sm font-medium">
+                    <section className="flex-1 w-full min-w-0 max-w-full lg:max-w-[calc(100%-312px)]">
+                        <div className="bg-white rounded-xl py-3 px-4 sm:px-5 mb-4 flex flex-wrap items-center justify-between gap-3 shadow-sm border border-gray-200">
+                            <div className="text-sm font-medium min-w-0">
                                 <span className="text-gray-500">Сортировка: </span>
                                 <select
                                     value={sortBy}
                                     onChange={(e) => handleSortChange(e.target.value)}
-                                    className="text-[#08004E] font-bold ml-1 bg-transparent outline-none"
+                                    className="text-[#08004E] font-bold ml-1 bg-transparent outline-none max-w-[10rem] sm:max-w-none"
                                 >
                                     <option value="popular">сначала популярные</option>
                                     <option value="price_asc">сначала дешевые</option>
                                     <option value="price_desc">сначала дорогие</option>
                                 </select>
                             </div>
+                            {currentCategorySlug ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setMobileFiltersOpen(true)}
+                                    className="lg:hidden inline-flex items-center gap-2 h-9 px-3 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 bg-white hover:border-[#08004E] hover:text-[#08004E] transition"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9M3 12h6M3 16h3M14 8l4 4-4 4" />
+                                    </svg>
+                                    Фильтры
+                                    {activeFiltersCount > 0 ? (
+                                        <span className="min-w-[1.25rem] h-5 px-1.5 rounded-full bg-[#08004E] text-white text-xs font-bold flex items-center justify-center">
+                                            {activeFiltersCount}
+                                        </span>
+                                    ) : null}
+                                </button>
+                            ) : null}
                         </div>
 
                         {/* Список товаров */}
@@ -501,6 +547,34 @@ export default function CatalogSearch({ products, categories }) {
 
                 </div>
             </main>
+
+            {mobileFiltersOpen && currentCategorySlug ? (
+                <div className="fixed inset-0 z-50 lg:hidden">
+                    <button
+                        type="button"
+                        className="absolute inset-0 bg-black/50"
+                        aria-label="Закрыть фильтры"
+                        onClick={() => setMobileFiltersOpen(false)}
+                    />
+                    <div className="absolute inset-y-0 left-0 w-[min(100%,320px)] bg-white shadow-xl flex flex-col">
+                        <div className="flex items-center justify-between p-4 border-b border-gray-200 shrink-0">
+                            <h2 className="text-lg font-bold text-black">Фильтры</h2>
+                            <button
+                                type="button"
+                                onClick={() => setMobileFiltersOpen(false)}
+                                className="text-gray-500 hover:text-[#08004E] text-2xl leading-none"
+                                aria-label="Закрыть"
+                            >
+                                &times;
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-4">
+                            {filtersPanelContent(applyFiltersAndClose, resetFiltersAndClose)}
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+
             <Footer />
         </div>
     );
