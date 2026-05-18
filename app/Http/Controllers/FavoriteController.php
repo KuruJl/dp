@@ -14,6 +14,7 @@ class FavoriteController extends Controller
             ->favorites()
             ->with([
                 'category',
+                'attributes',
                 'images' => fn($q) => $q->where('is_main', true),
             ])
             ->latest('favorites.created_at')

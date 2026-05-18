@@ -3,6 +3,61 @@ import { Head, Link, router } from '@inertiajs/react';
 import Header from '@/Components/Header';
 import Footer from '@/Components/Footer';
 
+const normalizeSpecs = (product) => {
+    const rawSpecs = product?.specs ?? product?.attributes ?? [];
+
+    if (Array.isArray(rawSpecs)) {
+        return rawSpecs
+            .map((attr) => {
+                if (!attr || typeof attr !== 'object') return null;
+                const name = attr.name;
+                const value = attr.pivot?.value ?? attr.value ?? null;
+                return name && value ? { name, value } : null;
+            })
+            .filter(Boolean);
+    }
+
+    if (rawSpecs && typeof rawSpecs === 'object') {
+        return Object.entries(rawSpecs)
+            .map(([name, value]) => {
+                if (value && typeof value === 'object') {
+                    const objectName = value.name ?? name;
+                    const objectValue = value.pivot?.value ?? value.value ?? null;
+                    return objectName && objectValue ? { name: objectName, value: objectValue } : null;
+                }
+                return value ? { name, value } : null;
+            })
+            .filter(Boolean);
+    }
+
+    return [];
+};
+
+const formatProductSpecs = (product) => {
+    const specs = normalizeSpecs(product);
+
+    if (specs.length === 0) {
+        return product.description || 'Характеристики отсутствуют в базе';
+    }
+
+    const cleanSpecs = specs
+        .filter((attr) => {
+            const name = attr.name.toLowerCase();
+            return (
+                !name.includes('гаранти') &&
+                !name.includes('стран') &&
+                !name.includes('цвет') &&
+                !name.includes('модель')
+            );
+        })
+        .slice(0, 5)
+        .map((attr) => `${attr.name}: ${attr.value}`);
+
+    return cleanSpecs.length > 0
+        ? cleanSpecs.join(' • ')
+        : product.description || 'Характеристики отсутствуют';
+};
+
 export default function Favorites({ favorites = [] }) {
     const formatPrice = (val) => new Intl.NumberFormat('ru-RU').format(val || 0);
     const [toast, setToast] = useState({ visible: false, message: '', tone: 'info' });
@@ -84,8 +139,8 @@ export default function Favorites({ favorites = [] }) {
                                     <Link href={`/products/${product.slug || product.id}`}>
                                         <h3 className="text-lg font-bold text-black leading-snug hover:text-[#08004E] transition-colors">{product.name}</h3>
                                     </Link>
-                                    <p className="text-xs text-gray-500 mt-2 line-clamp-2">
-                                        {product.category?.name ? `Категория: ${product.category.name}` : 'Добавлено в избранное'}
+                                    <p className="text-xs text-gray-500 mt-2 leading-relaxed line-clamp-2 min-h-[32px]">
+                                        {formatProductSpecs(product)}
                                     </p>
                                 </div>
 
