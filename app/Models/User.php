@@ -18,15 +18,23 @@ class User extends Authenticatable
         'email',
         'password',
         'phone',
-        'is_admin',
         'provider_name',
-        'provider_id'
+        'provider_id',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'is_admin' => 'boolean',
+        ];
+    }
 
     public function orders()
     {

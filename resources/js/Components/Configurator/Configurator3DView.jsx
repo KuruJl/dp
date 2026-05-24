@@ -1,6 +1,6 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Billboard, Grid, OrbitControls, useGLTF, Environment, Html, useProgress } from '@react-three/drei';
+import { Billboard, Grid, OrbitControls, useGLTF, Environment, Html, useProgress, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { getSlot3dConfig } from '@/Components/Configurator/slot3dConfig';
 
@@ -131,26 +131,26 @@ function SlotTagLabel({ text, isSelected }) {
     );
 }
 
-function SlotMiniButton({ slot, isSelected, onPick, showTag = true }) {
+function SlotMiniButton({ slot, isSelected, isEmpty, onPick, showTag = true, billboardOffset = [0.02, 0.11, 0.02] }) {
     const pointerDown = useRef({ x: 0, y: 0, dragged: false });
 
     const { map, size } = useMemo(() => {
         const tex = makePlusSpriteTexture(
-            isSelected ? '#15803d' : 'rgba(15,23,42,0.85)',
-            isSelected ? '#ffffff' : 'rgba(255,255,255,0.95)'
+            isSelected ? '#15803d' : '#08004E',
+            '#ffffff'
         );
         return {
             map: tex,
-            size: 0.055,
+            size: isEmpty ? 0.07 : 0.055,
         };
-    }, [isSelected]);
+    }, [isSelected, isEmpty]);
 
     useEffect(() => () => map.dispose(), [map]);
 
     const tagText = SLOT_TAGS[slot.categorySlug] || slot.categorySlug;
 
     return (
-        <Billboard position={[0.02, 0.11, 0.02]}>
+        <Billboard position={billboardOffset}>
             <sprite
                 scale={[size, size, size]}
                 renderOrder={2000}
@@ -254,33 +254,158 @@ function SlotObject({ slot, isSelected, onClick, alwaysVisible = false, showMark
         }
     });
 
+    const markerAnchor = cfg.markerPosition ?? cfg.position;
+    const billboardOffset = cfg.markerBillboardOffset ?? [0.02, 0.11, 0.02];
+
     return (
-        <group position={cfg.position} rotation={cfg.rotation}>
-            {shouldRender && (
-                <group ref={groupRef}>
-                    {cfg.modelPath ? (
-                        <Suspense fallback={null}>
-                            <GlbModel url={cfg.modelPath} position={[0, 0, 0]} rotation={[0, 0, 0]} scale={1} />
-                        </Suspense>
-                    ) : (
-                        <>
-                            <mesh castShadow receiveShadow>
-                                <boxGeometry args={[0.25, 0.05, 0.15]} />
-                                <meshStandardMaterial color={baseColor} roughness={0.6} metalness={0.1} />
-                            </mesh>
-                            <lineSegments>
-                                <edgesGeometry args={[new THREE.BoxGeometry(0.25, 0.05, 0.15)]} />
-                                <lineBasicMaterial color={edgeColor} />
-                            </lineSegments>
-                        </>
-                    )}
+        <>
+            <group position={cfg.position} rotation={cfg.rotation}>
+                {shouldRender && (
+                    <group ref={groupRef}>
+                        {cfg.modelPath ? (
+                            <Suspense fallback={null}>
+                                <GlbModel url={cfg.modelPath} position={[0, 0, 0]} rotation={[0, 0, 0]} scale={1} />
+                            </Suspense>
+                        ) : (
+                            <>
+                                <mesh castShadow receiveShadow>
+                                    <boxGeometry args={[0.25, 0.05, 0.15]} />
+                                    <meshStandardMaterial color={baseColor} roughness={0.6} metalness={0.1} />
+                                </mesh>
+                                <lineSegments>
+                                    <edgesGeometry args={[new THREE.BoxGeometry(0.25, 0.05, 0.15)]} />
+                                    <lineBasicMaterial color={edgeColor} />
+                                </lineSegments>
+                            </>
+                        )}
+                    </group>
+                )}
+            </group>
+
+            {showMarker && (
+                <group position={markerAnchor}>
+                    <SlotMiniButton
+                        slot={slot}
+                        isSelected={isSelected}
+                        isEmpty={!isSelected}
+                        onPick={onClick}
+                        billboardOffset={billboardOffset}
+                    />
                 </group>
             )}
+        </>
+    );
+}
 
-            {showMarker && (alwaysVisible || isSelected) && (
-                <SlotMiniButton slot={slot} isSelected={isSelected} onPick={onClick} />
+function Configurator3DScene({ visualSlots, assembly, onSlotClick, isExpanded }) {
+    const sceneBg = isExpanded ? '#0c0a18' : '#05070d';
+    const envPreset = isExpanded ? 'studio' : 'city';
+    const envIntensity = isExpanded ? 1.1 : 1.5;
+
+    return (
+        <>
+            <color attach="background" args={[sceneBg]} />
+            <fog attach="fog" args={[sceneBg, isExpanded ? 1.4 : 2, isExpanded ? 4.5 : 6]} />
+
+            <SceneLoadingOverlay />
+
+            <Environment preset={envPreset} environmentIntensity={envIntensity} />
+
+            <ambientLight intensity={isExpanded ? 1.8 : 2.5} />
+            <hemisphereLight
+                intensity={isExpanded ? 1.4 : 2.0}
+                color="#f5f3ff"
+                groundColor={isExpanded ? '#1e1b4b' : '#0f172a'}
+            />
+
+            <directionalLight
+                position={[10, 15, 10]}
+                intensity={isExpanded ? 4.5 : 6.0}
+                color="#fffbeb"
+                castShadow
+                shadow-mapSize-width={2048}
+                shadow-mapSize-height={2048}
+                shadow-bias={-0.0001}
+            />
+
+            <directionalLight position={[-8, 6, -8]} intensity={isExpanded ? 2.5 : 3.5} color="#c4b5fd" />
+
+            {isExpanded && (
+                <directionalLight position={[0, 4, -6]} intensity={2.2} color="#8b5cf6" />
             )}
-        </group>
+
+            <pointLight position={[0, 0.6, 0.5]} intensity={isExpanded ? 3.5 : 5.0} distance={5} decay={1.5} color="#ffffff" />
+            <pointLight position={[0.15, 0.65, 0.2]} intensity={isExpanded ? 2.5 : 3.5} distance={3} decay={2} color="#f8fafc" />
+            <pointLight position={[-0.1, 0.3, 0.3]} intensity={isExpanded ? 2 : 3.0} distance={3} decay={2} color="#e0e7ff" />
+
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.002, 0]} receiveShadow>
+                <planeGeometry args={[12, 12]} />
+                <meshStandardMaterial color={isExpanded ? '#080612' : '#02040a'} roughness={1} metalness={0} />
+            </mesh>
+
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+                {isExpanded ? <circleGeometry args={[2.2, 72]} /> : <planeGeometry args={[4, 4]} />}
+                <meshStandardMaterial
+                    color={isExpanded ? '#1a1733' : '#06080f'}
+                    roughness={isExpanded ? 0.55 : 1}
+                    metalness={isExpanded ? 0.25 : 0}
+                />
+            </mesh>
+
+            <Grid
+                position={[0, 0.002, 0]}
+                args={[isExpanded ? 5 : 4, isExpanded ? 5 : 4]}
+                cellSize={0.25}
+                cellThickness={0.5}
+                cellColor={isExpanded ? '#3f3868' : '#2a3140'}
+                sectionSize={1}
+                sectionThickness={1}
+                sectionColor={isExpanded ? '#5b4bb8' : '#485266'}
+                fadeDistance={isExpanded ? 3 : 2}
+                fadeStrength={2}
+                infiniteGrid={false}
+            />
+
+            {isExpanded && (
+                <ContactShadows
+                    position={[0, 0.003, 0]}
+                    opacity={0.45}
+                    scale={12}
+                    blur={2.8}
+                    far={1.2}
+                    color="#08004E"
+                />
+            )}
+
+            {visualSlots.map((slot) => {
+                const slotKey = slot.slotKey || slot.categorySlug;
+                const isMirrorOnly = slot.__isMirrorOnly === true;
+                const isSelected = isMirrorOnly
+                    ? !!assembly['operativnaia-pamiat']
+                    : !!assembly[slotKey];
+
+                return (
+                    <SlotObject
+                        key={slotKey}
+                        slot={slot}
+                        isSelected={isSelected}
+                        onClick={onSlotClick}
+                        alwaysVisible={slotKey === 'korpusa'}
+                        showMarker={!isMirrorOnly}
+                    />
+                );
+            })}
+
+            <OrbitControls
+                enablePan={false}
+                enableDamping
+                dampingFactor={0.08}
+                minDistance={0.2}
+                maxDistance={isExpanded ? 2 : 1.5}
+                maxPolarAngle={Math.PI / 1}
+                target={[0, 0.5, 0]}
+            />
+        </>
     );
 }
 
@@ -308,94 +433,32 @@ export default function Configurator3DView({ componentSlots, assembly, onSlotCli
         [componentSlots, assembly]
     );
 
+    const wrapperClass = isExpanded
+        ? 'w-full h-full min-h-0 flex flex-col'
+        : 'w-full bg-black rounded-xl overflow-hidden shadow-inner p-3 border border-gray-300';
+
+    const canvasWrapClass = isExpanded
+        ? 'w-full flex-1 min-h-[60vh] rounded-xl overflow-hidden'
+        : 'w-full h-[380px] rounded-lg overflow-hidden bg-black';
+
     return (
-        <div className="w-full bg-[#08004E] rounded-xl overflow-hidden shadow-inner p-3 border border-gray-300">
-            <div className={`w-full ${isExpanded ? 'h-[78vh]' : 'h-[380px]'} rounded-lg overflow-hidden bg-[#08004E]`}>
-            <Canvas
+        <div className={wrapperClass}>
+            <div className={canvasWrapClass}>
+                <Canvas
                     shadows
                     dpr={[1, 1.5]}
-                    camera={{ position:[0.7, 0.6, 0.8], fov: 50, near: 0.01, far: 100 }}
-                    gl={{ 
+                    camera={{ position: [0.7, 0.6, 0.8], fov: 50, near: 0.01, far: 100 }}
+                    gl={{
                         toneMapping: THREE.ACESFilmicToneMapping,
-                        toneMappingExposure: 1.3 
+                        toneMappingExposure: isExpanded ? 1.15 : 1.3,
                     }}
                 >
-                    <color attach="background" args={['#05070d']} />
-
-                    <SceneLoadingOverlay />
-
-                    <Environment preset="city" environmentIntensity={1.5} />
-
-                    <ambientLight intensity={2.5} />
-                    <hemisphereLight intensity={2.0} color="#ffffff" groundColor="#0f172a" />
-                    
-                    <directionalLight 
-                        position={[10, 15, 10]} 
-                        intensity={6.0} 
-                        color="#fffbeb"
-                        castShadow 
-                        shadow-mapSize-width={2048} 
-                        shadow-mapSize-height={2048}
-                        shadow-bias={-0.0001}
+                    <Configurator3DScene
+                        visualSlots={visualSlots}
+                        assembly={assembly}
+                        onSlotClick={onSlotClick}
+                        isExpanded={isExpanded}
                     />
-                    
-                    <directionalLight position={[-8, 6, -8]} intensity={3.5} color="#bae6fd" />
-
-                    <pointLight position={[0, 0.6, 0.5]} intensity={5.0} distance={5} decay={1.5} color="#ffffff" />
-                    <pointLight position={[0.15, 0.65, 0.2]} intensity={3.5} distance={3} decay={2} color="#f8fafc" />
-                    <pointLight position={[-0.1, 0.3, 0.3]} intensity={3.0} distance={3} decay={2} color="#e0e7ff" />
-
-                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.002, 0]} receiveShadow>
-                        <planeGeometry args={[12, 12]} />
-                        <meshStandardMaterial color="#02040a" roughness={1} metalness={0} />
-                    </mesh>
-
-                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-                        <planeGeometry args={[4, 4]} />
-                        <meshStandardMaterial color="#06080f" roughness={1} metalness={0} />
-                    </mesh>
-                    <Grid
-                        position={[0, 0.002, 0]}
-                        args={[4, 4]}
-                        cellSize={0.25}
-                        cellThickness={0.5}
-                        cellColor="#2a3140"
-                        sectionSize={1}
-                        sectionThickness={1}
-                        sectionColor="#485266"
-                        fadeDistance={2}
-                        fadeStrength={2}
-                        infiniteGrid={false}
-                    />
-
-                    {visualSlots.map((slot) => {
-                        const slotKey = slot.slotKey || slot.categorySlug;
-                        const isMirrorOnly = slot.__isMirrorOnly === true;
-                        const isSelected = isMirrorOnly
-                            ? !!assembly['operativnaia-pamiat']
-                            : !!assembly[slotKey];
-
-                        return (
-                            <SlotObject
-                                key={slotKey}
-                                slot={slot}
-                                isSelected={isSelected}
-                                onClick={onSlotClick}
-                                alwaysVisible={slotKey === 'korpusa'}
-                                showMarker={!isMirrorOnly}
-                            />
-                        );
-                    })}
-
-                    <OrbitControls
-                        enablePan={false}
-                        enableDamping
-                        dampingFactor={0.08}
-                        minDistance={0.2}
-                        maxDistance={1.5}
-                        maxPolarAngle={Math.PI / 1}
-                        target={[0, 0.5, 0]}
-                        />
                 </Canvas>
             </div>
         </div>

@@ -2,22 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Assembly;
 use App\Models\Product;
 use App\Services\CompatibilityService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AssemblyController extends Controller
 {
-    public function checkCompatibility(Request $request, CompatibilityService $service)
+    public function checkCompatibility(Request $request, CompatibilityService $service): JsonResponse
     {
-        $componentIds = $request->input('component_ids', []);
+        $validated = $request->validate([
+            'component_ids' => ['required', 'array', 'max:32'],
+            'component_ids.*' => ['integer', 'distinct', 'exists:products,id'],
+        ]);
 
-        if (empty($componentIds)) {
-            return response()->json([]);
-        }
+        $componentIds = $validated['component_ids'];
 
         $components = Product::with(['category', 'attributes'])->whereIn('id', $componentIds)->get();
         $errors = $service->checkAssembly($components);
@@ -26,7 +27,7 @@ class AssemblyController extends Controller
             return response()->json([
                 'compatible' => false,
                 'errors' => $errors,
-            ], 422); 
+            ], 422);
         }
 
         return response()->json([
@@ -35,14 +36,26 @@ class AssemblyController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function index(): JsonResponse
     {
+        $assemblies = Assembly::query()
+            ->where('user_id', Auth::id())
+            ->latest()
+            ->get(['id', 'name', 'description', 'created_at', 'updated_at']);
+
+        return response()->json($assemblies);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $this->validatedAssemblyPayload($request);
+
         $assembly = Assembly::create([
             'user_id' => Auth::id(),
-            'name' => $request->input('name', 'Новая сборка')
+            'name' => $validated['name'],
         ]);
 
-        $assembly->products()->sync($request->input('component_ids',[]));
+        $assembly->products()->sync($validated['component_ids']);
 
         return response()->json([
             'message' => 'Сборка успешно сохранена!',
@@ -51,28 +64,61 @@ class AssemblyController extends Controller
         ], 201);
     }
 
-    public function update(Request $request, Assembly $assembly)
+    public function update(Request $request, Assembly $assembly): JsonResponse
     {
-        $assembly->update(['name' => $request->input('name')]);
-        $assembly->products()->sync($request->input('component_ids', []));
+        $this->authorize('update', $assembly);
+
+        $validated = $this->validatedAssemblyPayload($request);
+
+        $assembly->update(['name' => $validated['name']]);
+        $assembly->products()->sync($validated['component_ids']);
 
         return response()->json(['message' => 'Сборка обновлена!']);
     }
 
-    public function show(Assembly $assembly)
+    public function show(Assembly $assembly): JsonResponse
     {
+        $this->authorize('view', $assembly);
+
         $assembly->load('products.category', 'products.images', 'products.attributes');
-        
-        $assembly->components = $assembly->products->map(function($product) {
+
+        $assembly->components = $assembly->products->map(function ($product) {
             $product->image_url = $product->images->first()?->path;
             if ($product->category) {
                 $product->category->type = 'component';
             }
+
             return $product;
         });
 
         $assembly->makeHidden('products');
 
         return response()->json($assembly);
+    }
+
+    public function destroy(Assembly $assembly): JsonResponse
+    {
+        $this->authorize('delete', $assembly);
+
+        $assembly->delete();
+
+        return response()->json(['message' => 'Сборка удалена.']);
+    }
+
+    /**
+     * @return array{name: string, component_ids: array<int, int>}
+     */
+    private function validatedAssemblyPayload(Request $request): array
+    {
+        $validated = $request->validate([
+            'name' => ['nullable', 'string', 'max:255'],
+            'component_ids' => ['nullable', 'array', 'max:32'],
+            'component_ids.*' => ['integer', 'distinct', 'exists:products,id'],
+        ]);
+
+        return [
+            'name' => trim((string) ($validated['name'] ?? '')) ?: 'Новая сборка',
+            'component_ids' => array_values(array_unique($validated['component_ids'] ?? [])),
+        ];
     }
 }

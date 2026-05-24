@@ -1,30 +1,36 @@
 import React from 'react';
 
+const CASE_OUTLINE_IMAGE = '/images/korpus.png';
+const CASE_SELECTED_IMAGE = '/images/korpus-selected.png';
+
 export default function Configurator2DView({ componentSlots, assembly, onSlotClick }) {
+    const hasCaseSelected = !!assembly?.korpusa;
+
     return (
-        <div className="w-full bg-[#08004E] rounded-xl overflow-hidden shadow-inner p-6 border border-gray-300">
+        <div className="w-full bg-black rounded-xl overflow-hidden shadow-inner p-6 border border-gray-300">
             <div className="relative mx-auto w-full">
                 <img
-                    src="/images/korpus.png"
-                    alt="Схема корпуса ПК"
-                    className="w-full h-auto opacity-50 pointer-events-none select-none"
+                    src={hasCaseSelected ? CASE_SELECTED_IMAGE : CASE_OUTLINE_IMAGE}
+                    alt="Корпус ПК"
+                    className={`w-full h-auto object-contain pointer-events-none select-none relative z-0 transition-opacity duration-300 ${
+                        hasCaseSelected ? 'opacity-100' : 'opacity-50'
+                    }`}
                 />
 
                 {componentSlots.map((slot) => {
                     const slotKey = slot.slotKey || slot.categorySlug;
                     const selectedItem = assembly[slotKey];
                     const isCase = slotKey === 'korpusa';
-                    const isRamSlot = slot.categorySlug === 'operativnaia-pamiat';
 
                     if (isCase) {
                         return (
                             <button
                                 key={`btn-${slotKey}`}
                                 onClick={() => onSlotClick(slot)}
-                                className={`absolute ${slot.buttonPosition} rounded-full border-2 flex items-center justify-center transition-all shadow-md z-20 ${
+                                className={`absolute top-2 left-2 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all shadow-md z-20 ${
                                     selectedItem
                                         ? 'bg-green-500 border-green-500 text-white'
-                                        : 'bg-[#08004E] border-white text-white hover:bg-white hover:text-[#08004E]'
+                                        : 'bg-black border-white text-white hover:bg-white hover:text-black'
                                 }`}
                                 title={slot.displayName}
                             >
@@ -43,7 +49,7 @@ export default function Configurator2DView({ componentSlots, assembly, onSlotCli
 
                     return (
                         <React.Fragment key={`map-${slotKey}`}>
-                            <div className={`absolute ${slot.imagePosition} flex items-center justify-center pointer-events-none`}>
+                            <div className={`absolute z-10 ${slot.imagePosition} flex items-center justify-center pointer-events-none`}>
                                 <img
                                     src={slot.placeholderUrl}
                                     alt={selectedItem ? slot.displayName : 'заглушка'}
@@ -56,22 +62,12 @@ export default function Configurator2DView({ componentSlots, assembly, onSlotCli
                                 />
                             </div>
 
-                            {isRamSlot && selectedItem && slot.secondaryImagePosition && (
-                                <div className={`absolute ${slot.secondaryImagePosition} flex items-center justify-center pointer-events-none`}>
-                                    <img
-                                        src={slot.placeholderUrl}
-                                        alt={`${slot.displayName} #2`}
-                                        className="max-w-full max-h-full object-contain pointer-events-none transition-all duration-300 opacity-100 drop-shadow-[0_0_10px_rgba(255,255,255,0.35)]"
-                                    />
-                                </div>
-                            )}
-
                             <button
                                 onClick={() => onSlotClick(slot)}
-                                className={`absolute ${slot.buttonPosition} rounded-full border flex items-center justify-center transition-all z-20 shadow-md ${
+                                className={`absolute z-20 ${slot.buttonPosition} rounded-full border flex items-center justify-center transition-all shadow-md ${
                                     selectedItem
                                         ? 'bg-green-500 border-green-500 text-white'
-                                        : 'bg-[#08004E] border-white text-white hover:bg-white hover:text-[#08004E]'
+                                        : 'bg-black border-white text-white hover:bg-white hover:text-black'
                                 }`}
                                 title={slot.displayName}
                             >

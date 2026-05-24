@@ -297,7 +297,7 @@ export default function ComponentSelectorModal({ isOpen, onClose, categoryInfo, 
                 </aside>
 
                 {mobileFiltersOpen ? (
-                    <div className="fixed inset-0 z-[60] lg:hidden">
+                    <div className="fixed inset-0 z-[120] lg:hidden">
                         <button
                             type="button"
                             className="absolute inset-0 bg-black/50"

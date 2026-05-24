@@ -45,7 +45,6 @@ const componentSlots =[
         categorySlug: "operativnaia-pamiat", displayName: "Оперативная память", isRequired: false,
         placeholderUrl: "/images/RAM.webp",
         imagePosition: "top-[23%] left-[40%] w-[12%] h-[20%]", buttonPosition: "top-[20%] left-[46%] w-5 h-5",
-        secondaryImagePosition: "top-[23%] left-[47%] w-[12%] h-[20%]",
     },
     {
         categorySlug: "videokarty", displayName: "Видеокарта", isRequired: false,
@@ -312,10 +311,10 @@ export default function Index({ editingAssemblyId = null, loadAssemblyId = null 
                                 const selectedItem = assembly[slotKey];
 
                                 return selectedItem ? (
-                                    <div key={slotKey} className="bg-white border-2 border-[#08004E] rounded-md p-2.5 sm:p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 md:gap-4 shadow-sm transition min-w-0">
-                                        <p className="text-[10px] leading-tight font-bold text-[#08004E] sm:text-black sm:w-28 md:w-36 lg:w-40 sm:shrink-0">{slot.displayName}</p>
+                                    <div key={slotKey} className="bg-white border-2 border-[#08004E] rounded-md p-3 sm:p-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 md:gap-4 shadow-sm transition min-w-0">
+                                        <p className="text-sm sm:text-base leading-snug font-bold text-[#08004E] sm:text-black sm:w-32 md:w-40 lg:w-44 sm:shrink-0">{slot.displayName}</p>
                                         <div className="flex flex-col items-center gap-1.5 w-full min-w-0 sm:flex-row sm:items-center sm:flex-1 sm:gap-3">
-                                        <div className="w-14 h-14 sm:w-10 sm:h-10 md:w-12 md:h-12 shrink-0 flex items-center justify-center p-1 bg-gray-50 rounded mx-auto sm:mx-0">
+                                        <div className="w-20 h-20 sm:w-[4.5rem] sm:h-[4.5rem] md:w-20 md:h-20 shrink-0 flex items-center justify-center p-1.5 bg-gray-50 rounded mx-auto sm:mx-0">
                                             <img src={selectedItem.image_url || '/images/default_product.png'} alt="img" className="max-w-full max-h-full object-contain" />
                                         </div>
                                         <div className="w-full min-w-0 text-center sm:text-left px-0.5 sm:px-0 sm:flex-1">
@@ -346,8 +345,8 @@ export default function Index({ editingAssemblyId = null, loadAssemblyId = null 
                                         </div>
                                     </div>
                                 ) : (
-                                    <div key={slotKey} onClick={() => handlePlaceholderClick(slot)} className="bg-white/50 border border-gray-300 rounded-md p-2.5 sm:p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 cursor-pointer hover:border-[#08004E] hover:bg-white transition group min-h-0 sm:min-h-[76px]">
-                                        <p className="text-[10px] leading-tight font-bold text-black sm:w-28 md:w-36 lg:w-40 sm:shrink-0">{slot.displayName}</p>
+                                    <div key={slotKey} onClick={() => handlePlaceholderClick(slot)} className="bg-white/50 border border-gray-300 rounded-md p-3 sm:p-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 cursor-pointer hover:border-[#08004E] hover:bg-white transition group min-h-0 sm:min-h-[88px]">
+                                        <p className="text-sm sm:text-base leading-snug font-bold text-black sm:w-32 md:w-40 lg:w-44 sm:shrink-0">{slot.displayName}</p>
                                         <div className="flex flex-1 items-center justify-center py-3 sm:py-0 min-h-[52px] sm:min-h-0">
                                             <span className="text-gray-400 group-hover:text-[#08004E] transition flex items-center gap-1.5 text-xs sm:text-sm font-medium">
                                                 <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
@@ -417,6 +416,11 @@ export default function Index({ editingAssemblyId = null, loadAssemblyId = null 
                                     isExpanded={false}
                                 />
                             )}
+
+                            <p className="text-xs sm:text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 leading-snug">
+                                <span className="font-bold">В разработке.</span>{' '}
+                                Конфигуратор находится в разработке — возможны ошибки и неточности в работе.
+                            </p>
 
                             <div className="flex flex-col gap-3 mt-2">
                                 <button onClick={() => auth.user ? setIsSaveModalOpen(true) : alert('Войдите, чтобы сохранить черновик сборки')} className="w-full bg-white text-black font-extrabold text-lg py-4 rounded-md border border-gray-300 hover:border-[#08004E] hover:shadow-md transition">
@@ -579,7 +583,7 @@ export default function Index({ editingAssemblyId = null, loadAssemblyId = null 
                             </button>
                         </div>
 
-                        <div className="flex-1 p-4 sm:p-6 overflow-auto">
+                        <div className={`flex-1 min-h-0 p-4 sm:p-6 ${viewMode === '3d' ? 'flex flex-col overflow-hidden' : 'overflow-auto'}`}>
                             {viewMode === '2d' && (
                                 <Configurator2DView
                                     componentSlots={componentSlots}

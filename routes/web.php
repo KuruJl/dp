@@ -83,8 +83,10 @@ Route::prefix('api')->group(function () {
     Route::get('/components',[\App\Http\Controllers\ProductController::class, 'apiIndex']);
     Route::get('/components/{product}', [\App\Http\Controllers\ProductController::class, 'apiShow']); 
     
-    Route::post('/assemblies/check-compatibility', [\App\Http\Controllers\AssemblyController::class, 'checkCompatibility']);
-    Route::post('/cart/promocode-preview', [CartController::class, 'previewPromocode']);
+    Route::post('/assemblies/check-compatibility', [\App\Http\Controllers\AssemblyController::class, 'checkCompatibility'])
+        ->middleware('throttle:30,1');
+    Route::post('/cart/promocode-preview', [CartController::class, 'previewPromocode'])
+        ->middleware('throttle:20,1');
     Route::get('/pickup-points', [\App\Http\Controllers\PickupPointController::class, 'index']);
     Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle'])->name('stripe.webhook');
 });

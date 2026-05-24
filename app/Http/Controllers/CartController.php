@@ -80,6 +80,15 @@ class CartController extends Controller
         return Cart::firstOrCreate(['guest_token' => $guestToken]);
     }
 
+    private function authorizeCartItem(CartItem $cartItem): void
+    {
+        $cart = $this->getCart();
+
+        if ((int) $cartItem->cart_id !== (int) $cart->id) {
+            abort(403, 'Нет доступа к этой позиции корзины.');
+        }
+    }
+
     public function index(): Response
     {
         $cart = $this->getCart();
@@ -183,6 +192,8 @@ class CartController extends Controller
 
     public function update(Request $request, CartItem $cartItem)
     {
+        $this->authorizeCartItem($cartItem);
+
         $validated = $request->validate(['quantity' => 'required|integer|min:1']);
         $product = $cartItem->product;
 
@@ -197,6 +208,8 @@ class CartController extends Controller
 
     public function remove(CartItem $cartItem)
     {
+        $this->authorizeCartItem($cartItem);
+
         $cartItem->delete();
 
         return redirect()->back()->with('success', 'Товар удален из корзины!');

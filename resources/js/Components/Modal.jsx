@@ -8,7 +8,7 @@ export default function Modal({ isOpen, onClose, title, children }) {
     return (
 
         <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110]"
             onClick={onClose}
         >
 
